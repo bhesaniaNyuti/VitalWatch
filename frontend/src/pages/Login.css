@@ -2,7 +2,7 @@
 
 .login-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--neutral-100) 0%, var(--neutral-200) 100%); /* Lighter, more modern background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -16,15 +16,16 @@
     width: 100%;
     background: white;
     border-radius: var(--radius-2xl);
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden; /* Ensure rounded corners clip content */
+    box-shadow: var(--shadow-xl); /* Stronger shadow for depth */
 }
 
 .login-card {
-    padding: 3rem;
+    padding: var(--spacing-3xl); /* Use CSS variable for consistent spacing */
     display: flex;
     flex-direction: column;
     justify-content: center;
+    position: relative; /* For potential absolute positioning of elements */
 }
 
 .login-header {
@@ -35,12 +36,12 @@
 .login-logo {
     width: 3rem;
     height: 3rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%); /* Updated gradient for logo */
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: var(--font-size-xl); /* Adjust font size */
     margin: 0 auto 0.75rem;
 }
 
@@ -54,7 +55,7 @@
 .login-subtitle {
     font-size: var(--font-size-sm);
     color: var(--neutral-600);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium); /* Use CSS variable for consistent font weight */
 }
 
 .login-form {
@@ -68,7 +69,7 @@
     color: var(--status-critical);
     padding: 0.875rem 1rem;
     border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-sm); /* Ensure consistent font size */
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -85,7 +86,7 @@
 .form-label {
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--neutral-700);
+    color: var(--neutral-700); /* Consistent color for labels */
 }
 
 .form-input {
@@ -93,9 +94,9 @@
     font-size: var(--font-size-sm);
     border: 2px solid var(--neutral-200);
     border-radius: var(--radius-md);
-    transition: all var(--transition-base);
     font-family: var(--font-family);
-    background: var(--bg-secondary);
+    transition: all var(--transition-base);
+    background: var(--bg-primary); /* Lighter background for inputs */
 }
 
 .form-input:focus {
@@ -111,11 +112,22 @@
 
 .btn-login {
     width: 100%;
-    padding: 0.875rem;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
+    padding: var(--spacing-sm) var(--spacing-lg); /* Use CSS variables for padding */
+    font-size: var(--font-size-lg); /* Larger font size for button text */
+    font-weight: var(--font-weight-semibold); /* Consistent font weight */
     margin-top: 0.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #7e3af2 0%, #9061f9 100%); /* Updated gradient for button */
+    color: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-login:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 .btn-login:hover {
@@ -130,9 +142,9 @@
 
 .back-link {
     color: var(--neutral-600);
-    text-decoration: none;
     font-size: var(--font-size-sm);
-    font-weight: 500;
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
     transition: color var(--transition-base);
     display: inline-flex;
     align-items: center;
@@ -140,7 +152,8 @@
 }
 
 .back-link:hover {
-    color: #667eea;
+    color: var(--primary-purple); /* Assuming a primary purple for hover, adjust as needed */
+    text-decoration: underline;
 }
 
 /* Login Info Section */
@@ -158,14 +171,14 @@
 }
 
 .info-content h2 {
-    font-size: var(--font-size-3xl);
-    font-weight: 800;
+    font-size: var(--font-size-4xl); /* Larger font size for welcome title */
+    font-weight: var(--font-weight-extrabold); /* Extra bold font weight */
     color: white;
     margin-bottom: 1rem;
 }
 
 .info-content p {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-lg); /* Slightly larger paragraph text */
     color: rgba(255, 255, 255, 0.9);
     line-height: 1.7;
     margin-bottom: 2rem;
@@ -185,7 +198,7 @@
     background: rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-lg);
     backdrop-filter: blur(10px);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
 }
 
 .feature-icon {
@@ -216,6 +229,7 @@
     padding: 2.5rem;
 }
 
+/* Add font weights to global.css if they don't exist */
 .form-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");

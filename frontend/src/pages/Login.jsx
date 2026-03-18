@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import authService from '../services/authService';
+import { useAuth } from '../context/AuthContext'; // Import useAuth
 import './Login.css';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login } = useAuth(); // Use the login function from AuthContext
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: ''
     });
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setFormData({
@@ -17,19 +21,29 @@ const Login = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
 
-        // Simple validation
-        if (!formData.username || !formData.password) {
-            setError('Please enter both username and password');
+        if (!formData.email || !formData.password) {
+            setError('Please enter both email and password');
+            setLoading(false);
             return;
         }
 
-        // TODO: Replace with actual API call
-        // For now, just navigate to dashboard
-        console.log('Login attempt:', formData);
-        navigate('/doctor-view');
+        try {
+            const userData = await authService.login(formData.email, formData.password);
+            login(userData); // Update AuthContext with user data
+            navigate('/doctor-view');
+        } catch (err) {
+            const message = err.response && err.response.data && err.response.data.message
+                ? err.response.data.message
+                : err.message;
+            setError(message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -52,18 +66,18 @@ const Login = () => {
                         )}
 
                         <div className="form-group">
-                            <label htmlFor="username" className="form-label">
-                                Username
+                            <label htmlFor="email" className="form-label">
+                                Email
                             </label>
                             <input
-                                type="text"
-                                id="username"
-                                name="username"
+                                type="email"
+                                id="email"
+                                name="email"
                                 className="form-input"
-                                placeholder="Enter your username"
-                                value={formData.username}
+                                placeholder="Enter your email"
+                                value={formData.email}
                                 onChange={handleChange}
-                                autoComplete="username"
+                                autoComplete="email"
                             />
                         </div>
 
@@ -83,8 +97,8 @@ const Login = () => {
                             />
                         </div>
 
-                        <button type="submit" className="btn btn-primary btn-login">
-                            Login to Dashboard
+                        <button type="submit" className="btn btn-primary btn-login" disabled={loading}>
+                            {loading ? 'Logging in...' : 'Login to Dashboard'}
                         </button>
                     </form>
 

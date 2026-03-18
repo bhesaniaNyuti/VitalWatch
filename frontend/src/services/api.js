@@ -1,21 +1,25 @@
+import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
 
-class ApiService {
-    async get(endpoint) {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`);
-        return response.json();
-    }
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
 
-    async post(endpoint, data) {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-        return response.json();
+// Add a request interceptor to include the token
+api.interceptors.request.use(
+    (config) => {
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user && user.token) {
+            config.headers.Authorization = `Bearer ${user.token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-}
+);
 
-export default new ApiService();
+export default api;

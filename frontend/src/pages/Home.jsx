@@ -25,7 +25,7 @@ const Home = () => {
                                 🔔
                                 <span className="notification-badge">3</span>
                             </div>
-                            <Link to="/login" className="user-avatar">👤</Link>
+                            <Link to="/doctor-view" className="user-avatar">👤</Link>
                         </div>
                     </div>
                 </div>

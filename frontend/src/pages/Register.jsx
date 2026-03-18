@@ -1,27 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import './Login.css';
+import authService from '../services/authService'; // Import authService
+import './Register.css'; // Import Register.css instead of Login.css
 
 const Register = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
-        username: '',
+        name: '', // Changed from username to name
         password: '',
         confirmPassword: '',
-        role: 'doctor'
     });
     const [errors, setErrors] = useState({});
+    const [serverError, setServerError] = useState(''); // For API errors
+    const [loading, setLoading] = useState(false); // Loading state
 
     const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
-        // Clear error for this field when user starts typing
         if (errors[e.target.name]) {
             setErrors({ ...errors, [e.target.name]: '' });
         }
+        setServerError(''); // Clear server error on input change
     };
 
     const validateForm = () => {
@@ -33,10 +35,10 @@ const Register = () => {
             newErrors.email = 'Email is invalid';
         }
 
-        if (!formData.username) {
-            newErrors.username = 'Username is required';
-        } else if (formData.username.length < 3) {
-            newErrors.username = 'Username must be at least 3 characters';
+        if (!formData.name) { // Changed from username to name
+            newErrors.name = 'Username is required';
+        } else if (formData.name.length < 3) {
+            newErrors.name = 'Username must be at least 3 characters';
         }
 
         if (!formData.password) {
@@ -55,14 +57,30 @@ const Register = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setServerError('');
+        setLoading(true);
 
         if (validateForm()) {
-            // TODO: Replace with actual API call
-            console.log('Registration attempt:', formData);
-            // Navigate to login page after successful registration
-            navigate('/login');
+            try {
+                // The backend expects 'name', 'email', 'password'
+                await authService.register({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password,
+                });
+                navigate('/login'); // Navigate to login page after successful registration
+            } catch (err) {
+                const message = err.response && err.response.data && err.response.data.message
+                    ? err.response.data.message
+                    : err.message;
+                setServerError(message);
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            setLoading(false);
         }
     };
 
@@ -79,6 +97,12 @@ const Register = () => {
 
                     {/* Registration Form */}
                     <form className="login-form" onSubmit={handleSubmit}>
+                        {serverError && (
+                            <div className="error-message">
+                                ⚠️ {serverError}
+                            </div>
+                        )}
+
                         <div className="form-group">
                             <label htmlFor="email" className="form-label">
                                 Email Address
@@ -99,21 +123,21 @@ const Register = () => {
                         </div>
 
                         <div className="form-group">
-                            <label htmlFor="username" className="form-label">
+                            <label htmlFor="name" className="form-label"> {/* Changed htmlFor and name to 'name' */}
                                 Username
                             </label>
                             <input
                                 type="text"
-                                id="username"
-                                name="username"
-                                className={`form-input ${errors.username ? 'input-error' : ''}`}
+                                id="name"
+                                name="name"
+                                className={`form-input ${errors.name ? 'input-error' : ''}`}
                                 placeholder="Choose a username"
-                                value={formData.username}
+                                value={formData.name}
                                 onChange={handleChange}
                                 autoComplete="username"
                             />
-                            {errors.username && (
-                                <span className="error-text">{errors.username}</span>
+                            {errors.name && (
+                                <span className="error-text">{errors.name}</span>
                             )}
                         </div>
 
@@ -155,24 +179,10 @@ const Register = () => {
                             )}
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="role" className="form-label">
-                                Role
-                            </label>
-                            <select
-                                id="role"
-                                name="role"
-                                className="form-input form-select"
-                                value={formData.role}
-                                onChange={handleChange}
-                            >
-                                <option value="doctor">Doctor</option>
-                                <option value="nurse">Nurse</option>
-                            </select>
-                        </div>
+                        {/* Removed the role select as it's not in the design */}
 
-                        <button type="submit" className="btn btn-primary btn-login">
-                            Create Account
+                        <button type="submit" className="btn btn-primary btn-login" disabled={loading}>
+                            {loading ? 'Creating Account...' : 'Create Account'}
                         </button>
                     </form>
 
