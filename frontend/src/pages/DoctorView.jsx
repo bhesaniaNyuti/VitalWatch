@@ -207,7 +207,8 @@ const ECGWaveform = () => {
 
 const DoctorView = () => {
     const navigate = useNavigate();
-    const [selected, setSelected]     = useState(PATIENTS[0]);
+    const detailRef = useRef(null);
+    const [selected, setSelected]     = useState(null);
     const [search, setSearch]         = useState('');
     const [physioTab, setPhysioTab]   = useState('PPG');
     const [bpTrend, setBpTrend]       = useState(BP_TREND);
@@ -227,6 +228,7 @@ const DoctorView = () => {
                 if (Array.isArray(liveData.patients) && liveData.patients.length > 0) {
                     setPatients(liveData.patients);
                     setSelected((prevSelected) => {
+                        if (!prevSelected?.id) return null;
                         const previousId = prevSelected?.id;
                         const matchedPatient = liveData.patients.find((patient) => patient.id === previousId);
                         return matchedPatient || liveData.patients[0];
@@ -254,6 +256,13 @@ const DoctorView = () => {
     const filtered = patients.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handleSelectPatient = (patient) => {
+        setSelected(patient);
+        requestAnimationFrame(() => {
+            detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    };
 
     const selectedHistory = selected ? (patientHistory[selected.id] || []) : [];
     const criticalCount = patients.filter((patient) => patient.status === 'Critical').length;
@@ -341,56 +350,6 @@ const DoctorView = () => {
                     ))}
                 </div>
 
-                {/* Charts Row */}
-                <div className="dv-two-col">
-                    {/* BP Trend Chart */}
-                    <div className="dv-card dv-bp-card">
-                        <div className="dv-card-head">
-                            <div>
-                                <h2 className="dv-card-title">Blood Pressure Trend</h2>
-                                <p className="dv-card-sub">Systolic &amp; Diastolic — Last 24 hours</p>
-                            </div>
-                            <div className="dv-legend">
-                                <span className="dv-legend-item"><span className="dv-dot dv-dot-red" /> Systolic</span>
-                                <span className="dv-legend-item"><span className="dv-dot dv-dot-blue" /> Diastolic</span>
-                            </div>
-                        </div>
-                        <ResponsiveContainer width="100%" height={260}>
-                            <LineChart data={bpTrend} margin={{ top: 8, right: 16, left: -24, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                                <YAxis domain={[60, 190]} ticks={[60, 95, 130, 165, 190]}
-                                    tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                                <Tooltip content={<BPTooltip />} />
-                                <ReferenceLine y={140} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
-                                <ReferenceLine y={90}  stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
-                                <Line type="monotone" dataKey="sys" stroke="#ef4444" strokeWidth={2.5} dot={false} />
-                                <Line type="monotone" dataKey="dia" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    {/* Physiological Signals */}
-                    <div className="dv-card dv-physio-card">
-                        <div className="dv-card-head">
-                            <div>
-                                <h2 className="dv-card-title">Physiological Signals</h2>
-                                <p className="dv-card-sub">Live PPG / ECG waveform</p>
-                            </div>
-                            <div className="dv-tab-group">
-                                {['PPG', 'ECG'].map(t => (
-                                    <button key={t}
-                                        className={`dv-tab ${physioTab === t ? 'dv-tab-active' : ''}`}
-                                        onClick={() => setPhysioTab(t)}>
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <ECGWaveform key={physioTab} />
-                    </div>
-                </div>
-
                 {/* Patient Table + Recent Alerts Row */}
                 <div className="dv-two-col">
                     {/* Patient Table */}
@@ -414,7 +373,7 @@ const DoctorView = () => {
                                     {filtered.map(p => (
                                         <tr key={p.id}
                                             className={`dv-tr ${selected?.id === p.id ? 'dv-tr-sel' : ''}`}
-                                            onClick={() => setSelected(p)}>
+                                            onClick={() => handleSelectPatient(p)}>
                                             <td>
                                                 <div className="dv-pt-cell">
                                                     <div className={`dv-avatar dv-av-${p.status.toLowerCase()}`}>{p.ini}</div>
@@ -472,7 +431,7 @@ const DoctorView = () => {
 
                 {/* Selected Patient Detail Card */}
                 {selected && (
-                    <div className="dv-detail-card">
+                    <div ref={detailRef} className="dv-detail-card">
                         <div className="dv-profile-top">
                             <div className="dv-profile-user">
                                 <div className={`dv-profile-avatar dv-av-${selected.status.toLowerCase()}`}>{selected.ini}</div>
@@ -493,6 +452,53 @@ const DoctorView = () => {
                                 <div className="dv-profile-item"><span>Bed Number</span><strong>{selected.bed}</strong></div>
                             </div>
                         </div>
+
+                        <section className="dv-detail-charts">
+                            <div className="dv-card dv-bp-card">
+                                <div className="dv-card-head">
+                                    <div>
+                                        <h2 className="dv-card-title">Blood Pressure Trend</h2>
+                                        <p className="dv-card-sub">{selected.name} — Last 24 hours</p>
+                                    </div>
+                                    <div className="dv-legend">
+                                        <span className="dv-legend-item"><span className="dv-dot dv-dot-red" /> Systolic</span>
+                                        <span className="dv-legend-item"><span className="dv-dot dv-dot-blue" /> Diastolic</span>
+                                    </div>
+                                </div>
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <LineChart data={bpTrend} margin={{ top: 8, right: 16, left: -24, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                        <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                        <YAxis domain={[60, 190]} ticks={[60, 95, 130, 165, 190]}
+                                            tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                        <Tooltip content={<BPTooltip />} />
+                                        <ReferenceLine y={140} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
+                                        <ReferenceLine y={90}  stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
+                                        <Line type="monotone" dataKey="sys" stroke="#ef4444" strokeWidth={2.5} dot={false} />
+                                        <Line type="monotone" dataKey="dia" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            <div className="dv-card dv-physio-card">
+                                <div className="dv-card-head">
+                                    <div>
+                                        <h2 className="dv-card-title">Physiological Signals</h2>
+                                        <p className="dv-card-sub">Live PPG / ECG waveform</p>
+                                    </div>
+                                    <div className="dv-tab-group">
+                                        {['PPG', 'ECG'].map(t => (
+                                            <button key={t}
+                                                className={`dv-tab ${physioTab === t ? 'dv-tab-active' : ''}`}
+                                                onClick={() => setPhysioTab(t)}>
+                                                {t}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <ECGWaveform key={physioTab} />
+                            </div>
+                        </section>
 
                         <section className="dv-vitals-section">
                             <h3 className="dv-section-title">Patient Current Vitals</h3>
@@ -566,6 +572,12 @@ const DoctorView = () => {
                                 </table>
                             </div>
                         </section>
+                    </div>
+                )}
+
+                {!selected && (
+                    <div className="dv-select-hint">
+                        Click on a patient row in Patient Monitoring to view patient details and graphs.
                     </div>
                 )}
 
