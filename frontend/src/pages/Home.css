@@ -312,7 +312,7 @@
 
 .preview-stat-card {
     background: white;
-    padding: 1.5rem;
+    padding: 1.15rem;
     border-radius: var(--radius-xl);
     border: 1px solid var(--neutral-100);
     box-shadow: var(--shadow-sm);
@@ -392,12 +392,12 @@
 .patients-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
+    gap: 1.1rem;
 }
 
 .patient-card {
     background: white;
-    padding: 1.5rem;
+    padding: 1.1rem;
     border-radius: var(--radius-xl);
     border: 2px solid var(--neutral-100);
     transition: all var(--transition-base);
@@ -422,7 +422,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .patient-info {
@@ -461,13 +461,13 @@
 }
 
 .bp-value {
-    font-size: 2.5rem;
+    font-size: 2.1rem;
     font-weight: 800;
     color: var(--neutral-900);
 }
 
 .bp-separator {
-    font-size: 2rem;
+    font-size: 1.7rem;
     color: var(--neutral-400);
 }
 
@@ -524,7 +524,7 @@
 
 .alert-card {
     background: white;
-    padding: 1.25rem;
+    padding: 1rem;
     border-radius: var(--radius-lg);
     border: 1px solid var(--neutral-100);
     position: relative;

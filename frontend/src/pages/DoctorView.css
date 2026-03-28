@@ -35,21 +35,31 @@
 .dv-search-box {
     display: flex;
     align-items: center;
-    gap: 0;
-    background: transparent;
-    border: none;
+    gap: 0.25rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 6px;
-    padding: 0.1rem;
-    width: auto;
+    padding: 0.15rem;
+    width: fit-content;
     transition: all 0.15s;
-    cursor: pointer;
 }
 
-.dv-search-box:focus-within { border-color: #6366f1; }
+.dv-search-box:focus-within,
+.dv-search-box.dv-search-box-active { border-color: #6366f1; }
+
 .dv-search-svg { flex-shrink: 0; width: 14px; height: 14px; }
 
 .dv-search-input {
-    display: none;
+    display: block;
+    width: 220px;
+    opacity: 1;
+    pointer-events: auto;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.82rem;
+    color: #334155;
+    transition: width 0.2s ease, opacity 0.2s ease;
 }
 
 .dv-search-input::placeholder { color: #94a3b8; }
@@ -58,6 +68,25 @@
     display: flex;
     align-items: center;
     gap: 0.9rem;
+}
+
+.dv-home-btn {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.dv-home-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
 }
 
 .dv-notif-btn {
@@ -788,7 +817,8 @@
     .dv-stats-grid    { grid-template-columns: 1fr; }
     .dv-main          { padding: 1rem; }
     .dv-topbar        { padding: 0.6rem 1rem; }
-    .dv-search-box    { width: auto; flex: 1; }
+    .dv-search-box    { width: auto; }
+    .dv-search-input  { width: 130px; }
     .dv-vitals-grid   { grid-template-columns: 1fr; }
     .dv-profile-grid  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dv-detail-card   { padding: 0.75rem; }

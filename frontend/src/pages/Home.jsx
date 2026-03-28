@@ -11,7 +11,7 @@ const Home = () => {
                     <div className="navbar-content">
                         <Link to="/" className="navbar-logo">
                             <div className="logo-icon">❤️</div>
-                            <span>Medico</span>
+                            <span>VitalWatch</span>
                         </Link>
 
                         <ul className="navbar-nav">
@@ -471,7 +471,7 @@ const Home = () => {
                         <div>
                             <div className="footer-brand">
                                 <div className="logo-icon">❤️</div>
-                                <span>Medico</span>
+                                <span>VitalWatch</span>
                             </div>
                             <p className="footer-description">
                                 Advanced IoT-powered blood pressure monitoring platform for healthcare professionals. Monitor, analyze, and respond to patient vitals in real-time.
@@ -510,7 +510,7 @@ const Home = () => {
                     </div>
 
                     <div className="footer-bottom">
-                        <p>&copy; 2026 Medico. All rights reserved. Built with ❤️ for healthcare professionals.</p>
+                        <p>&copy; 2026 VitalWatch. All rights reserved. Built with ❤️ for healthcare professionals.</p>
                     </div>
                 </div>
             </footer>

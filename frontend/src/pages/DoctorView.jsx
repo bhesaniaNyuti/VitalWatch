@@ -7,83 +7,6 @@ import {
 import { subscribeLiveDashboard } from '../services/liveDashboardService';
 import './DoctorView.css';
 
-/* ── Static Data ─────────────────────────────────────────── */
-
-const BP_TREND = [
-    { time: '10:43pm', sys: 120, dia: 82 },
-    { time: '12:43am', sys: 116, dia: 68 },
-    { time: '03:43am', sys: 125, dia: 88 },
-    { time: '06:43am', sys: 122, dia: 85 },
-    { time: '09:43am', sys: 132, dia: 84 },
-    { time: '11:43am', sys: 130, dia: 82 },
-    { time: '01:43pm', sys: 136, dia: 88 },
-    { time: '04:43pm', sys: 127, dia: 87 },
-    { time: '07:43pm', sys: 122, dia: 82 },
-];
-
-const PATIENTS = [
-    { id: 'P001', ini: 'RK', name: 'Rajesh Kumar',  age: 58, sex: 'Male',   bg: 'O+', location: 'Room 101', bp: '162/105', sys: 162, dia: 105, hr: 92,  spo2: 94, glucose: 164, chol: 212, status: 'Critical', upd: '2 min ago', department: 'Cardiology', registered: '12 Jan, 2022', appointment: 41, bed: '#0101', medHx: 'Hypertension, Stage 2 CKD', meds: 'Amlodipine, Lisinopril, Atorvastatin', allergies: 'Penicillin, Sulfa', emergency: '+91-9876543210 (Wife)', risk: 'High - BP spike detected' },
-    { id: 'P002', ini: 'PS', name: 'Priya Sharma',  age: 34, sex: 'Female', bg: 'B+', location: 'Ward A5', bp: '118/76',  sys: 118, dia: 76,  hr: 72,  spo2: 98, glucose: 97,  chol: 85,  status: 'Normal',   upd: '1 min ago', department: 'Cardiology', registered: '20 Jan, 2023', appointment: 35, bed: '#0365', medHx: 'PCOS', meds: 'Metformin, Spironolactone', allergies: 'None', emergency: '+91-9876543211 (Brother)', risk: 'Low - Stable' },
-    { id: 'P003', ini: 'AP', name: 'Amit Patel',    age: 67, sex: 'Male',   bg: 'AB+', location: 'ICU-2', bp: '145/92',  sys: 145, dia: 92,  hr: 88,  spo2: 96, glucose: 149, chol: 201, status: 'Warning',  upd: '5 min ago', department: 'Endocrinology', registered: '05 Oct, 2021', appointment: 52, bed: '#0208', medHx: 'Diabetes Type 2, CAD', meds: 'Metoprolol, Aspirin, Insulin', allergies: 'Cephalosporin', emergency: '+91-9876543212 (Daughter)', risk: 'Moderate - Blood sugar elevated' },
-    { id: 'P004', ini: 'SR', name: 'Sneha Reddy',   age: 45, sex: 'Female', bg: 'A+', location: 'Room 305', bp: '122/78',  sys: 122, dia: 78,  hr: 68,  spo2: 99, glucose: 92,  chol: 146, status: 'Normal',   upd: '3 min ago', department: 'Internal Medicine', registered: '18 Mar, 2023', appointment: 19, bed: '#0305', medHx: 'Thyroid (Hypothyroid)', meds: 'Levothyroxine', allergies: 'Codeine', emergency: '+91-9876543213 (Husband)', risk: 'Low - Normal range' },
-    { id: 'P005', ini: 'VS', name: 'Vikram Singh',  age: 72, sex: 'Male',   bg: 'O-', location: 'CCU-1', bp: '178/110', sys: 178, dia: 110, hr: 105, spo2: 91, glucose: 176, chol: 241, status: 'Critical', upd: '1 min ago', department: 'Cardiac Care', registered: '03 Aug, 2020', appointment: 68, bed: '#CC01', medHx: 'Hypertensive Crisis, AF', meds: 'Diltiazem, Warfarin, Furosemide', allergies: 'NSAIDs', emergency: '+91-9876543214 (Son)', risk: 'Critical - Immediate intervention needed' },
-    { id: 'P006', ini: 'AD', name: 'Ananya Das',    age: 29, sex: 'Female', bg: 'B-', location: 'Maternity', bp: '112/72',  sys: 112, dia: 72,  hr: 65,  spo2: 98, glucose: 89,  chol: 132, status: 'Normal',   upd: '8 min ago', department: 'Maternity', registered: '07 Jul, 2024', appointment: 9,  bed: '#M112', medHx: 'Pregnancy (28 weeks)', meds: 'Prenatal vitamins, Iron', allergies: 'Tetracycline', emergency: '+91-9876543215 (Mother)', risk: 'Low - Routine monitoring' },
-    { id: 'P007', ini: 'MA', name: 'Mohammed Ali',  age: 61, sex: 'Male',   bg: 'O+', location: 'Room 401', bp: '140/90',  sys: 140, dia: 90,  hr: 84,  spo2: 95, glucose: 131, chol: 186, status: 'Warning',  upd: '4 min ago', department: 'General Medicine', registered: '11 Nov, 2021', appointment: 44, bed: '#0401', medHx: 'Hypertension, Obesity', meds: 'Chlorthalidone, Omeprazole', allergies: 'Erythromycin', emergency: '+91-9876543216 (Sister)', risk: 'Moderate - Weight management needed' },
-    { id: 'P008', ini: 'KN', name: 'Kavitha Nair',  age: 52, sex: 'Female', bg: 'AB-', location: 'Ward B3', bp: '125/80',  sys: 125, dia: 80,  hr: 70,  spo2: 97, glucose: 103, chol: 165, status: 'Normal',   upd: '6 min ago', department: 'Neurology', registered: '26 Feb, 2022', appointment: 28, bed: '#B307', medHx: 'Migraine, Hyperlipidemia', meds: 'Topiramate, Rosuvastatin', allergies: 'Aspirin', emergency: '+91-9876543217 (Cousin)', risk: 'Low - Stable condition' },
-];
-
-const PATIENT_HISTORY = {
-    P001: [
-        { date: '08 Mar, 2026', diagnosis: 'Hypertensive Episode', severity: 'High', visits: 9, status: 'Under Treatment' },
-        { date: '03 Jan, 2026', diagnosis: 'Renal Function Review', severity: 'Low', visits: 4, status: 'Monitoring' },
-        { date: '12 Aug, 2025', diagnosis: 'Edema Follow-up', severity: 'High', visits: 6, status: 'Cured' },
-    ],
-    P002: [
-        { date: '20 Jan, 2023', diagnosis: 'Palpitation Assessment', severity: 'High', visits: 2, status: 'Under Treatment' },
-        { date: '12 Jan, 2022', diagnosis: 'Viral Fever', severity: 'Low', visits: 1, status: 'Cured' },
-        { date: '20 Jan, 2021', diagnosis: 'COVID 19', severity: 'High', visits: 6, status: 'Cured' },
-    ],
-    P003: [
-        { date: '16 Feb, 2026', diagnosis: 'Glucose Variability', severity: 'High', visits: 11, status: 'Under Treatment' },
-        { date: '22 Nov, 2025', diagnosis: 'Chest Discomfort', severity: 'Low', visits: 2, status: 'Monitoring' },
-        { date: '01 May, 2025', diagnosis: 'Post-op Follow-up', severity: 'Low', visits: 3, status: 'Cured' },
-    ],
-    P004: [
-        { date: '04 Mar, 2026', diagnosis: 'Thyroid Panel', severity: 'Low', visits: 3, status: 'Monitoring' },
-        { date: '17 Sep, 2025', diagnosis: 'Fatigue Assessment', severity: 'Low', visits: 2, status: 'Cured' },
-        { date: '08 Mar, 2025', diagnosis: 'Vitamin Deficiency', severity: 'Low', visits: 1, status: 'Cured' },
-    ],
-    P005: [
-        { date: '15 Mar, 2026', diagnosis: 'Hypertensive Crisis', severity: 'High', visits: 13, status: 'Under Treatment' },
-        { date: '28 Dec, 2025', diagnosis: 'AF Episode', severity: 'High', visits: 8, status: 'Monitoring' },
-        { date: '09 Jul, 2025', diagnosis: 'Breathlessness', severity: 'Low', visits: 4, status: 'Cured' },
-    ],
-    P006: [
-        { date: '11 Mar, 2026', diagnosis: 'Routine Prenatal Check', severity: 'Low', visits: 6, status: 'Monitoring' },
-        { date: '17 Jan, 2026', diagnosis: 'Anemia Screening', severity: 'Low', visits: 2, status: 'Cured' },
-        { date: '01 Oct, 2025', diagnosis: 'Nausea Management', severity: 'Low', visits: 1, status: 'Cured' },
-    ],
-    P007: [
-        { date: '09 Mar, 2026', diagnosis: 'BP Optimization', severity: 'High', visits: 7, status: 'Under Treatment' },
-        { date: '11 Dec, 2025', diagnosis: 'Dietary Counseling', severity: 'Low', visits: 4, status: 'Monitoring' },
-        { date: '30 Jun, 2025', diagnosis: 'Sleep Disturbance', severity: 'Low', visits: 2, status: 'Cured' },
-    ],
-    P008: [
-        { date: '05 Mar, 2026', diagnosis: 'Migraine Follow-up', severity: 'Low', visits: 5, status: 'Monitoring' },
-        { date: '08 Dec, 2025', diagnosis: 'Lipid Review', severity: 'High', visits: 6, status: 'Under Treatment' },
-        { date: '03 Jun, 2025', diagnosis: 'Neck Pain', severity: 'Low', visits: 2, status: 'Cured' },
-    ],
-};
-
-const ALERTS = [
-    { id: 1, type: 'critical', patient: 'Vikram Singh',  msg: 'Systolic BP 178 mmHg — Hypertensive Crisis',   time: '2 min ago',  unread: true  },
-    { id: 2, type: 'critical', patient: 'Rajesh Kumar',  msg: 'Systolic BP 162 mmHg — Stage 2 Hypertension', time: '5 min ago',  unread: true  },
-    { id: 3, type: 'warning',  patient: 'Amit Patel',   msg: 'Systolic BP 145 mmHg — Stage 1 Hypertension', time: '12 min ago', unread: false },
-    { id: 4, type: 'warning',  patient: 'Mohammed Ali', msg: 'Heart rate elevated — 84 bpm',                 time: '18 min ago', unread: false },
-    { id: 5, type: 'info',     patient: 'Priya Sharma', msg: 'BP within normal range — 118/76',              time: '30 min ago', unread: false },
-    { id: 6, type: 'critical', patient: 'Vikram Singh',  msg: 'SpO₂ dropped to 91% — below threshold',       time: '35 min ago', unread: false },
-];
-
 /* ── Icon SVGs ───────────────────────────────────────────── */
 
 const PeopleIcon = () => (
@@ -211,27 +134,27 @@ const DoctorView = () => {
     const [selected, setSelected]     = useState(null);
     const [search, setSearch]         = useState('');
     const [physioTab, setPhysioTab]   = useState('PPG');
-    const [bpTrend, setBpTrend]       = useState(BP_TREND);
-    const [patients, setPatients]     = useState(PATIENTS);
-    const [alerts, setAlerts]         = useState(ALERTS);
-    const [patientHistory, setPatientHistory] = useState(PATIENT_HISTORY);
-    const [devicesOnline, setDevicesOnline]   = useState(6);
-    const [liveStatus, setLiveStatus] = useState('demo');
+    const [bpTrend, setBpTrend]       = useState([]);
+    const [patients, setPatients]     = useState([]);
+    const [alerts, setAlerts]         = useState([]);
+    const [patientHistory, setPatientHistory] = useState({});
+    const [devicesOnline, setDevicesOnline]   = useState(0);
+    const [liveStatus, setLiveStatus] = useState('loading');
 
     useEffect(() => {
         const unsubscribe = subscribeLiveDashboard(
             (liveData) => {
-                if (Array.isArray(liveData.bpTrend) && liveData.bpTrend.length > 0) {
+                if (Array.isArray(liveData.bpTrend)) {
                     setBpTrend(liveData.bpTrend);
                 }
 
-                if (Array.isArray(liveData.patients) && liveData.patients.length > 0) {
+                if (Array.isArray(liveData.patients)) {
                     setPatients(liveData.patients);
                     setSelected((prevSelected) => {
                         if (!prevSelected?.id) return null;
                         const previousId = prevSelected?.id;
                         const matchedPatient = liveData.patients.find((patient) => patient.id === previousId);
-                        return matchedPatient || liveData.patients[0];
+                        return matchedPatient || null;
                     });
                 }
 
@@ -253,9 +176,10 @@ const DoctorView = () => {
         return () => unsubscribe();
     }, []);
 
-    const filtered = patients.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = patients.filter((p) => {
+        const query = search.toLowerCase();
+        return p.name.toLowerCase().includes(query) || String(p.id).toLowerCase().includes(query);
+    });
 
     const handleSelectPatient = (patient) => {
         setSelected(patient);
@@ -267,6 +191,21 @@ const DoctorView = () => {
     const selectedHistory = selected ? (patientHistory[selected.id] || []) : [];
     const criticalCount = patients.filter((patient) => patient.status === 'Critical').length;
     const unreadAlerts = alerts.filter((alert) => alert.unread).length;
+    const criticalAlerts = alerts.filter((alert) => alert.type === 'critical');
+    const recentAlertsToShow = criticalAlerts.length
+        ? criticalAlerts
+        : patients
+            .filter((patient) => patient.status === 'Critical')
+            .slice(0, 1)
+            .map((patient, index) => ({
+                id: `auto-critical-${patient.id}-${index}`,
+                type: 'critical',
+                patient: patient.name,
+                msg: `BP ${patient.bp} | HR ${patient.hr} bpm`,
+                time: patient.upd,
+                unread: true,
+            }));
+    const unreadRecentAlerts = recentAlertsToShow.filter((alert) => alert.unread).length;
     const averageBp = patients.length
         ? (() => {
             const totals = patients.reduce((acc, patient) => {
@@ -283,14 +222,24 @@ const DoctorView = () => {
         <div className="dv-root">
             {/* ── Top Bar ─────────────────────────────── */}
             <header className="dv-topbar">
-                <div className="dv-search-box">
-                    <svg className="dv-search-svg" viewBox="0 0 20 20" fill="none">
+                <div className="dv-search-box dv-search-box-active">
+                    <button
+                        className="dv-home-btn"
+                        type="button"
+                        aria-label="Go to home"
+                        onClick={() => navigate('/')}
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                            <path d="M12 3.2l9 7.2v10.1a1 1 0 01-1 1h-5.5a1 1 0 01-1-1v-5.2h-3v5.2a1 1 0 01-1 1H4a1 1 0 01-1-1V10.4l9-7.2z" />
+                        </svg>
+                    </button>
+                    <svg className="dv-search-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                         <circle cx="8.5" cy="8.5" r="5.5" stroke="#94a3b8" strokeWidth="1.6" />
                         <path d="M13 13l3.5 3.5" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>
                     <input
                         className="dv-search-input"
-                        placeholder="Search patients, reports..."
+                        placeholder="Search patient name or ID..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -324,17 +273,17 @@ const DoctorView = () => {
                     </div>
                     <div className="dv-online-badge">
                         <span className="dv-online-dot" />
-                        {liveStatus === 'live' ? 'Firebase Live' : liveStatus === 'error' ? 'Live Sync Error' : 'Demo Data'}
+                        {liveStatus === 'live' ? 'Firebase Live' : liveStatus === 'error' ? 'Live Sync Error' : 'Waiting for Live Data'}
                     </div>
                 </div>
 
                 {/* Stat Cards */}
                 <div className="dv-stats-grid">
                     {[
-                        { label: 'Total Patients',     value: String(patients.length), sub: liveStatus === 'live' ? 'Live from Firebase' : 'Local sample data', cls: 'dv-icon-purple', icon: <PeopleIcon /> },
+                        { label: 'Total Patients',     value: String(patients.length), sub: liveStatus === 'live' ? 'Live from Firebase' : 'No live records yet', cls: 'dv-icon-purple', icon: <PeopleIcon /> },
                         { label: 'Avg Blood Pressure', value: averageBp, sub: 'Live average',       cls: 'dv-icon-teal',   icon: <WaveIcon />,  unit: 'mmHg' },
                         { label: 'Critical Alerts',    value: String(criticalCount), sub: `${unreadAlerts} unread`, cls: 'dv-icon-red', icon: <AlertIcon /> },
-                        { label: 'Online Devices',     value: String(devicesOnline), sub: liveStatus === 'live' ? 'Realtime connected' : 'Fallback mode', cls: 'dv-icon-green',  icon: <WifiIcon />  },
+                        { label: 'Online Devices',     value: String(devicesOnline), sub: liveStatus === 'live' ? 'Realtime connected' : 'Awaiting sync', cls: 'dv-icon-green',  icon: <WifiIcon />  },
                     ].map(s => (
                         <div key={s.label} className="dv-stat-card">
                             <div>
@@ -379,12 +328,13 @@ const DoctorView = () => {
                                                     <div className={`dv-avatar dv-av-${p.status.toLowerCase()}`}>{p.ini}</div>
                                                     <div>
                                                         <div className="dv-pt-name">{p.name}</div>
-                                                        <div className="dv-pt-meta">{p.age}y · {p.sex}</div>
+                                                        <div className="dv-pt-meta">ID {p.id} · {p.age}y · {p.sex}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className={`dv-bp-val ${p.status === 'Critical' ? 'dv-red' : p.status === 'Warning' ? 'dv-orange' : ''}`}>
                                                 {p.bp}
+                                                <div className="dv-muted">{p.bpCategory || p.status}</div>
                                             </td>
                                             <td>{p.hr} <span className="dv-muted">bpm</span></td>
                                             <td className={p.spo2 < 95 ? 'dv-red' : ''}>{p.spo2}%</td>
@@ -403,14 +353,14 @@ const DoctorView = () => {
                         <div className="dv-card-head">
                             <div>
                                 <h2 className="dv-card-title">Recent Alerts</h2>
-                                <p className="dv-card-sub">2 unread</p>
+                                <p className="dv-card-sub">{unreadRecentAlerts} unread</p>
                             </div>
                             <button className="dv-viewall" onClick={() => navigate('/critical-alerts')}>
                                 View All
                             </button>
                         </div>
                         <div className="dv-alerts-list">
-                            {alerts.map(a => (
+                            {recentAlertsToShow.map(a => (
                                 <div key={a.id} className={`dv-alert dv-alert-${a.type} ${a.unread ? 'dv-alert-unread' : ''}`}>
                                     <div className={`dv-alert-icon dv-ai-${a.type}`}>
                                         {a.type === 'info' ? <InfoIcon /> : <WarnIcon />}
@@ -442,6 +392,7 @@ const DoctorView = () => {
                                 </div>
                             </div>
                             <div className="dv-profile-grid">
+                                <div className="dv-profile-item"><span>Patient ID</span><strong>{selected.id}</strong></div>
                                 <div className="dv-profile-item"><span>Sex</span><strong>{selected.sex}</strong></div>
                                 <div className="dv-profile-item"><span>Age</span><strong>{selected.age}</strong></div>
                                 <div className="dv-profile-item"><span>Blood</span><strong>{selected.bg}</strong></div>

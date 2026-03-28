@@ -86,4 +86,3 @@ You can change the path with `VITE_FIREBASE_DASHBOARD_DOC` in `.env`.
 }
 ```
 
-If Firebase env variables are missing, the UI automatically falls back to local sample data.
