@@ -5,6 +5,11 @@ const DEFAULT_READINGS_PATH = 'readings';
 const readingsPath = import.meta.env.VITE_FIREBASE_DASHBOARD_DOC || DEFAULT_READINGS_PATH;
 
 const parseTimestamp = (value) => {
+    if (typeof value === 'string') {
+        const parsedText = Date.parse(value);
+        if (Number.isFinite(parsedText)) return parsedText;
+    }
+
     const raw = Number(value);
     if (!Number.isFinite(raw) || raw <= 0) return Date.now();
 
@@ -57,6 +62,30 @@ const getSignalValue = (item) => {
     return 0;
 };
 
+const getIrSeries = (item) => {
+    if (Array.isArray(item?.ir)) {
+        return item.ir
+            .map((value) => Number(value))
+            .filter((value) => Number.isFinite(value));
+    }
+
+    const csvSeries = item?.IR || item?.ir_csv || item?.irCSV || item?.values || item?.data;
+    if (typeof csvSeries === 'string' && csvSeries.includes(',')) {
+        return csvSeries
+            .split(',')
+            .map((part) => Number(String(part).replace(/"/g, '').trim()))
+            .filter((value) => Number.isFinite(value));
+    }
+
+    const singleIr = Number(item?.ir);
+    if (Number.isFinite(singleIr)) return [singleIr];
+
+    const signal = Number(item?.signal);
+    if (Number.isFinite(signal)) return [signal];
+
+    return [];
+};
+
 const resolveBp = (item) => {
     const explicitSys = Number(item?.sys ?? item?.systolic);
     const explicitDia = Number(item?.dia ?? item?.diastolic);
@@ -90,7 +119,19 @@ const getStatus = (bpCategory) => {
 
 const isReadingRecord = (item) => {
     if (!item || typeof item !== 'object') return false;
-    return item.bpm !== undefined || item.signal !== undefined || item.ir !== undefined || item.sys !== undefined || item.systolic !== undefined;
+    return (
+        item.bpm !== undefined ||
+        item.BPM !== undefined ||
+        item.signal !== undefined ||
+        item.ir !== undefined ||
+        item.IR !== undefined ||
+        item.spo2 !== undefined ||
+        item.spO2 !== undefined ||
+        item.sys !== undefined ||
+        item.systolic !== undefined ||
+        item.timestamp !== undefined ||
+        item.Timestamp !== undefined
+    );
 };
 
 const collectReadings = (node, path = '') => {
@@ -120,11 +161,12 @@ const mapReadingsToPatients = (entries = []) => {
 
     return entries.map(({ id, item }, index) => {
         const safeItem = item || {};
-        const timestamp = parseTimestamp(safeItem.timestamp);
+        const timestamp = parseTimestamp(safeItem.timestamp ?? safeItem.Timestamp);
         const bp = resolveBp(safeItem);
         const sys = bp?.sys;
         const dia = bp?.dia;
-        const hr = Number.isFinite(Number(safeItem.bpm)) ? Number(safeItem.bpm) : null;
+        const hrRaw = Number(safeItem.bpm ?? safeItem.BPM ?? safeItem.hr ?? safeItem.heartRate);
+        const hr = Number.isFinite(hrRaw) ? hrRaw : null;
         const bpCategory = Number.isFinite(sys) && Number.isFinite(dia) ? getBpCategory(sys, dia) : 'Unavailable';
         const status = Number.isFinite(sys) && Number.isFinite(dia) ? getStatus(bpCategory) : 'Unknown';
         const labelSeed = String(id).slice(-4).toUpperCase();
@@ -143,7 +185,9 @@ const mapReadingsToPatients = (entries = []) => {
             dia,
             bpCategory,
             hr,
-            spo2: Number.isFinite(Number(safeItem.spo2)) ? Number(safeItem.spo2) : 0,
+            spo2: Number.isFinite(Number(safeItem.spo2 ?? safeItem.spO2 ?? safeItem.SpO2))
+                ? Number(safeItem.spo2 ?? safeItem.spO2 ?? safeItem.SpO2)
+                : 0,
             glucose: Number.isFinite(Number(safeItem.glucose)) ? Number(safeItem.glucose) : 0,
             chol: Number.isFinite(Number(safeItem.chol)) ? Number(safeItem.chol) : 0,
             status,
@@ -212,6 +256,47 @@ const normalizePatientHistory = (history) => {
     return {};
 };
 
+const buildPatientSignals = (entries = []) => {
+    const grouped = new Map();
+
+    entries.forEach((entry) => {
+        const patientId = String(entry?.id || '');
+        if (!patientId) return;
+
+        if (!grouped.has(patientId)) grouped.set(patientId, []);
+        const samples = grouped.get(patientId);
+        const irSeries = getIrSeries(entry.item);
+        const spo2 = Number(entry?.item?.spo2);
+        const time = formatTrendTime(entry.timestamp);
+
+        if (irSeries.length) {
+            irSeries.forEach((irValue, offset) => {
+                samples.push({
+                    sample: samples.length,
+                    ir: irValue,
+                    time,
+                    spo2: Number.isFinite(spo2) ? spo2 : null,
+                    readingId: `${entry.readingId}-${offset}`,
+                });
+            });
+            return;
+        }
+
+        const fallbackSignal = getSignalValue(entry.item);
+        samples.push({
+            sample: samples.length,
+            ir: fallbackSignal,
+            time,
+            spo2: Number.isFinite(spo2) ? spo2 : null,
+            readingId: String(entry.readingId || samples.length),
+        });
+    });
+
+    return Object.fromEntries(
+        Array.from(grouped.entries()).map(([patientId, samples]) => [patientId, samples.slice(-220)])
+    );
+};
+
 export const subscribeLiveDashboard = (onData, onStatusChange) => {
     if (!realtimeReady || !realtimeDb) {
         if (typeof onStatusChange === 'function') onStatusChange('fallback');
@@ -228,7 +313,7 @@ export const subscribeLiveDashboard = (onData, onStatusChange) => {
                 .map((entry) => ({
                     ...entry,
                     item: entry.item || {},
-                    timestamp: parseTimestamp(entry.item?.timestamp),
+                    timestamp: parseTimestamp(entry.item?.timestamp ?? entry.item?.Timestamp),
                 }))
                 .sort((a, b) => a.timestamp - b.timestamp);
 
@@ -239,17 +324,20 @@ export const subscribeLiveDashboard = (onData, onStatusChange) => {
 
             const patients = mapReadingsToPatients(Array.from(latestById.values()));
             const bpTrend = collected.slice(-50).map((entry) => {
-                const { sys, dia } = resolveBp(entry.item);
+                const bp = resolveBp(entry.item);
                 return {
                     time: formatTrendTime(entry.timestamp),
-                    sys,
-                    dia,
+                    sys: bp?.sys ?? null,
+                    dia: bp?.dia ?? null,
                 };
-            });
+            }).filter((point) => Number.isFinite(point.sys) && Number.isFinite(point.dia));
+
+            const patientSignals = buildPatientSignals(collected);
 
             const payload = {
                 bpTrend,
                 patients,
+                patientSignals,
                 alerts: buildAlertsFromPatients(patients),
                 patientHistory: normalizePatientHistory({}),
                 devicesOnline: patients.length,

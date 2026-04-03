@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
-    Tooltip, ResponsiveContainer, ReferenceLine
+    Tooltip, ResponsiveContainer
 } from 'recharts';
 import { subscribeLiveDashboard } from '../services/liveDashboardService';
 import './DoctorView.css';
@@ -63,18 +63,16 @@ const StatusBadge = ({ status }) => (
     </span>
 );
 
-/* ── BP Chart Tooltip ────────────────────────────────────── */
+/* ── PPG Chart Tooltip ───────────────────────────────────── */
 
-const BPTooltip = ({ active, payload, label }) => {
+const PPGTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
         <div className="dv-bp-tooltip">
-            <div className="dv-tooltip-time">{label}</div>
-            {payload.map(p => (
-                <div key={p.dataKey} style={{ color: p.stroke, fontSize: '0.82rem' }}>
-                    {p.dataKey === 'sys' ? 'Systolic' : 'Diastolic'}: <strong>{p.value}</strong>
-                </div>
-            ))}
+            <div className="dv-tooltip-time">Sample #{label}</div>
+            <div style={{ color: '#0f5cbd', fontSize: '0.82rem' }}>
+                IR: <strong>{payload[0]?.value}</strong>
+            </div>
         </div>
     );
 };
@@ -134,7 +132,6 @@ const DoctorView = () => {
     const [selected, setSelected]     = useState(null);
     const [search, setSearch]         = useState('');
     const [physioTab, setPhysioTab]   = useState('PPG');
-    const [bpTrend, setBpTrend]       = useState([]);
     const [patients, setPatients]     = useState([]);
     const [alerts, setAlerts]         = useState([]);
     const [patientHistory, setPatientHistory] = useState({});
@@ -144,10 +141,6 @@ const DoctorView = () => {
     useEffect(() => {
         const unsubscribe = subscribeLiveDashboard(
             (liveData) => {
-                if (Array.isArray(liveData.bpTrend)) {
-                    setBpTrend(liveData.bpTrend);
-                }
-
                 if (Array.isArray(liveData.patients)) {
                     setPatients(liveData.patients);
                     setSelected((prevSelected) => {
@@ -189,6 +182,7 @@ const DoctorView = () => {
     };
 
     const selectedHistory = selected ? (patientHistory[selected.id] || []) : [];
+    const selectedSignalSeries = selected?.irSeries || [];
     const criticalCount = patients.filter((patient) => patient.status === 'Critical').length;
     const unreadAlerts = alerts.filter((alert) => alert.unread).length;
     const criticalAlerts = alerts.filter((alert) => alert.type === 'critical');
@@ -201,27 +195,31 @@ const DoctorView = () => {
                 id: `auto-critical-${patient.id}-${index}`,
                 type: 'critical',
                 patient: patient.name,
-                msg: `BP ${patient.bp} | HR ${patient.hr} bpm`,
+                msg: `IR ${patient.irDisplay || 'Unavailable'} | BPM ${patient.bpmDisplay || 'Unavailable'} | SpO2 ${patient.spo2Display || 'Unavailable'}`,
                 time: patient.upd,
                 unread: true,
             }));
     const unreadRecentAlerts = recentAlertsToShow.filter((alert) => alert.unread).length;
-    const averageBp = patients.length
+    const averageBpm = patients.length
         ? (() => {
-            const totals = patients.reduce((acc, patient) => {
-                const sys = Number.isFinite(patient.sys) ? patient.sys : 120;
-                const dia = Number.isFinite(patient.dia) ? patient.dia : 80;
-                return { sys: acc.sys + sys, dia: acc.dia + dia };
-            }, { sys: 0, dia: 0 });
-
-            return `${Math.round(totals.sys / patients.length)}/${Math.round(totals.dia / patients.length)}`;
+            const bpmValues = patients.map((patient) => patient.bpm).filter((bpm) => Number.isFinite(bpm));
+            if (!bpmValues.length) return 'Unavailable';
+            const total = bpmValues.reduce((sum, value) => sum + value, 0);
+            return `${Math.round(total / bpmValues.length)}`;
         })()
-        : '0/0';
+        : 'Unavailable';
 
     return (
         <div className="dv-root">
             {/* ── Top Bar ─────────────────────────────── */}
             <header className="dv-topbar">
+                <div className="dv-brand">
+                    <img src="/charusat-logo.svg" alt="Charusat Hospital logo" className="dv-brand-logo" />
+                    <div className="dv-brand-text">
+                        <strong>Charusat Hospital</strong>
+                        <span>Patient Monitoring</span>
+                    </div>
+                </div>
                 <div className="dv-search-box dv-search-box-active">
                     <button
                         className="dv-home-btn"
@@ -281,7 +279,7 @@ const DoctorView = () => {
                 <div className="dv-stats-grid">
                     {[
                         { label: 'Total Patients',     value: String(patients.length), sub: liveStatus === 'live' ? 'Live from Firebase' : 'No live records yet', cls: 'dv-icon-purple', icon: <PeopleIcon /> },
-                        { label: 'Avg Blood Pressure', value: averageBp, sub: 'Live average',       cls: 'dv-icon-teal',   icon: <WaveIcon />,  unit: 'mmHg' },
+                        { label: 'Avg BPM', value: averageBpm, sub: 'Live average', cls: 'dv-icon-teal', icon: <WaveIcon />, unit: averageBpm === 'Unavailable' ? '' : 'bpm' },
                         { label: 'Critical Alerts',    value: String(criticalCount), sub: `${unreadAlerts} unread`, cls: 'dv-icon-red', icon: <AlertIcon /> },
                         { label: 'Online Devices',     value: String(devicesOnline), sub: liveStatus === 'live' ? 'Realtime connected' : 'Awaiting sync', cls: 'dv-icon-green',  icon: <WifiIcon />  },
                     ].map(s => (
@@ -309,9 +307,9 @@ const DoctorView = () => {
                             <table className="dv-table">
                                 <thead>
                                     <tr>
-                                        <th>PATIENT</th>
-                                        <th>BP (MMHG)</th>
-                                        <th>♡ HR</th>
+                                        <th>PATIENT / SESSION</th>
+                                        <th>IR</th>
+                                        <th>BPM</th>
                                         <th>SPO₂</th>
                                         <th>STATUS</th>
                                         <th>UPDATED</th>
@@ -328,16 +326,16 @@ const DoctorView = () => {
                                                     <div className={`dv-avatar dv-av-${p.status.toLowerCase()}`}>{p.ini}</div>
                                                     <div>
                                                         <div className="dv-pt-name">{p.name}</div>
-                                                        <div className="dv-pt-meta">ID {p.id} · {p.age}y · {p.sex}</div>
+                                                        <div className="dv-pt-meta">Session {p.sessionId || p.id}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className={`dv-bp-val ${p.status === 'Critical' ? 'dv-red' : p.status === 'Warning' ? 'dv-orange' : ''}`}>
-                                                {p.bp}
-                                                <div className="dv-muted">{p.bpCategory || p.status}</div>
+                                            <td className={`dv-bp-val ${p.status === 'Critical' ? 'dv-red' : ''}`}>
+                                                {p.irDisplay || 'Unavailable'}
+                                                <div className="dv-muted">Latest IR by max index</div>
                                             </td>
-                                            <td>{p.hr} <span className="dv-muted">bpm</span></td>
-                                            <td className={p.spo2 < 95 ? 'dv-red' : ''}>{p.spo2}%</td>
+                                            <td>{p.bpmDisplay || 'Unavailable'}</td>
+                                            <td className={Number.isFinite(p.spo2) && p.spo2 < 90 ? 'dv-red' : ''}>{p.spo2Display || 'Unavailable'}</td>
                                             <td><StatusBadge status={p.status} /></td>
                                             <td className="dv-muted">{p.upd}</td>
                                             <td className="dv-chevron">›</td>
@@ -408,27 +406,28 @@ const DoctorView = () => {
                             <div className="dv-card dv-bp-card">
                                 <div className="dv-card-head">
                                     <div>
-                                        <h2 className="dv-card-title">Blood Pressure Trend</h2>
-                                        <p className="dv-card-sub">{selected.name} — Last 24 hours</p>
+                                        <h2 className="dv-card-title">PPG Signal (IR Waveform)</h2>
+                                        <p className="dv-card-sub">{selected.name} — Live signal from Firebase session data</p>
                                     </div>
                                     <div className="dv-legend">
-                                        <span className="dv-legend-item"><span className="dv-dot dv-dot-red" /> Systolic</span>
-                                        <span className="dv-legend-item"><span className="dv-dot dv-dot-blue" /> Diastolic</span>
+                                        <span className="dv-legend-item"><span className="dv-dot dv-dot-blue" /> IR Signal</span>
                                     </div>
                                 </div>
-                                <ResponsiveContainer width="100%" height={260}>
-                                    <LineChart data={bpTrend} margin={{ top: 8, right: 16, left: -24, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                        <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                                        <YAxis domain={[60, 190]} ticks={[60, 95, 130, 165, 190]}
-                                            tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-                                        <Tooltip content={<BPTooltip />} />
-                                        <ReferenceLine y={140} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
-                                        <ReferenceLine y={90}  stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5} />
-                                        <Line type="monotone" dataKey="sys" stroke="#ef4444" strokeWidth={2.5} dot={false} />
-                                        <Line type="monotone" dataKey="dia" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                {selectedSignalSeries.length ? (
+                                    <ResponsiveContainer width="100%" height={260}>
+                                        <LineChart data={selectedSignalSeries} margin={{ top: 8, right: 16, left: -24, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                            <XAxis dataKey="sample" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                                            <Tooltip content={<PPGTooltip />} />
+                                            <Line type="monotone" dataKey="value" stroke="#0f5cbd" strokeWidth={2.2} dot={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="dv-select-hint" style={{ marginTop: '0.75rem' }}>
+                                        No IR waveform points available for this session yet.
+                                    </div>
+                                )}
                             </div>
 
                             <div className="dv-card dv-physio-card">

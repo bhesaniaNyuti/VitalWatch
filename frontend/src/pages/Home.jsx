@@ -10,7 +10,9 @@ const Home = () => {
                 <div className="container">
                     <div className="navbar-content">
                         <Link to="/" className="navbar-logo">
-                            <div className="logo-icon">❤️</div>
+                            <div className="logo-icon" aria-hidden="true">
+                                <img src="/charusat-logo.svg" alt="" />
+                            </div>
                             <span>VitalWatch</span>
                         </Link>
 
@@ -470,7 +472,9 @@ const Home = () => {
                     <div className="footer-content">
                         <div>
                             <div className="footer-brand">
-                                <div className="logo-icon">❤️</div>
+                                <div className="logo-icon" aria-hidden="true">
+                                    <img src="/charusat-logo.svg" alt="" />
+                                </div>
                                 <span>VitalWatch</span>
                             </div>
                             <p className="footer-description">
