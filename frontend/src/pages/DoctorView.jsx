@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer
@@ -57,9 +57,9 @@ const InfoIcon = () => (
 /* ── Status Badge ────────────────────────────────────────── */
 
 const StatusBadge = ({ status }) => (
-    <span className={`dv-badge dv-badge-${status.toLowerCase()}`}>
-        {status === 'Critical' && <span className="dv-badge-dot" />}
-        {status}
+    <span className={`dv-badge dv-badge-${status === 'Highly Critical' ? 'highly-critical' : status.toLowerCase()}`}>
+        {(status === 'Critical' || status === 'Highly Critical') && <span className="dv-badge-dot" />}
+        {status === 'Warning' ? 'Nearly Critical' : status}
     </span>
 );
 
@@ -124,10 +124,50 @@ const ECGWaveform = () => {
     );
 };
 
+const createPatientFromForm = (formData) => {
+    const generatedId = `P-${Date.now()}`;
+    const initials = String(formData.fullName || 'P')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || '')
+        .join('') || 'PT';
+
+    return {
+        id: generatedId,
+        ini: initials,
+        name: String(formData.fullName || '').trim(),
+        sessionId: generatedId,
+        bp: 'Not Yet Recorded',
+        bpmDisplay: 'Unavailable',
+        spo2Display: 'Unavailable',
+        status: 'Normal',
+        upd: 'Just now',
+        sex: formData.gender || 'Unknown',
+        age: Number(formData.age) || 'N/A',
+        heightCm: formData.heightCm ? Number(formData.heightCm) : 'N/A',
+        weightKg: formData.weightKg ? Number(formData.weightKg) : 'N/A',
+        existingConditions: Array.isArray(formData.existingConditions) ? formData.existingConditions : [],
+        medications: formData.medications?.trim() || 'None reported',
+        emergencyContact: formData.emergencyContact?.trim() || 'N/A',
+        assignedDoctor: formData.assignedDoctor?.trim() || 'Unassigned',
+        assignedNurse: formData.assignedNurse?.trim() || 'Unassigned',
+        bg: 'Unknown',
+        department: 'General Ward',
+        registered: new Date().toLocaleDateString(),
+        appointment: 'Pending',
+        bed: formData.roomNumber || 'N/A',
+        hr: 0,
+        glucose: 0,
+        chol: 0,
+    };
+};
+
 /* ── Main Component ──────────────────────────────────────── */
 
 const DoctorView = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const detailRef = useRef(null);
     const [selected, setSelected]     = useState(null);
     const [search, setSearch]         = useState('');
@@ -137,6 +177,7 @@ const DoctorView = () => {
     const [patientHistory, setPatientHistory] = useState({});
     const [devicesOnline, setDevicesOnline]   = useState(0);
     const [liveStatus, setLiveStatus] = useState('loading');
+    const [addPatientMessage, setAddPatientMessage] = useState('');
 
     useEffect(() => {
         const unsubscribe = subscribeLiveDashboard(
@@ -174,6 +215,20 @@ const DoctorView = () => {
         return p.name.toLowerCase().includes(query) || String(p.id).toLowerCase().includes(query);
     });
 
+    const handleOpenAddPatient = () => {
+        navigate('/doctor-view/add-patient');
+    };
+
+    useEffect(() => {
+        const incomingForm = location.state?.newPatientForm;
+        if (!incomingForm) return;
+
+        const newPatient = createPatientFromForm(incomingForm);
+        setPatients((current) => [newPatient, ...current]);
+        setAddPatientMessage(`Patient ${newPatient.name} added successfully.`);
+        navigate('/doctor-view', { replace: true });
+    }, [location.state, navigate]);
+
     const handleSelectPatient = (patient) => {
         setSelected(patient);
         requestAnimationFrame(() => {
@@ -183,26 +238,26 @@ const DoctorView = () => {
 
     const selectedHistory = selected ? (patientHistory[selected.id] || []) : [];
     const selectedSignalSeries = selected?.irSeries || [];
-    const criticalCount = patients.filter((patient) => patient.status === 'Critical').length;
+    const criticalCount = patients.filter((patient) => patient.status === 'Critical' || patient.status === 'Highly Critical').length;
     const unreadAlerts = alerts.filter((alert) => alert.unread).length;
-    const criticalAlerts = alerts.filter((alert) => alert.type === 'critical');
-    const recentAlertsToShow = criticalAlerts.length
-        ? criticalAlerts
+    const actionableAlerts = alerts.filter((alert) => alert.type === 'critical' || alert.type === 'warning');
+    const recentAlertsToShow = actionableAlerts.length
+        ? actionableAlerts
         : patients
-            .filter((patient) => patient.status === 'Critical')
-            .slice(0, 1)
+            .filter((patient) => patient.status !== 'Normal')
+            .slice(0, 3)
             .map((patient, index) => ({
-                id: `auto-critical-${patient.id}-${index}`,
-                type: 'critical',
+                id: `auto-alert-${patient.id}-${index}`,
+                type: patient.status === 'Critical' || patient.status === 'Highly Critical' ? 'critical' : 'warning',
                 patient: patient.name,
-                msg: `IR ${patient.irDisplay || 'Unavailable'} | BPM ${patient.bpmDisplay || 'Unavailable'} | SpO2 ${patient.spo2Display || 'Unavailable'}`,
+                msg: `BP ${patient.bp || 'Unavailable'} | BPM ${patient.bpmDisplay || 'Unavailable'} | SpO2 ${patient.spo2Display || 'Unavailable'}`,
                 time: patient.upd,
                 unread: true,
             }));
     const unreadRecentAlerts = recentAlertsToShow.filter((alert) => alert.unread).length;
     const averageBpm = patients.length
         ? (() => {
-            const bpmValues = patients.map((patient) => patient.bpm).filter((bpm) => Number.isFinite(bpm));
+            const bpmValues = patients.map((patient) => patient.bpm ?? patient.hr).filter((bpm) => Number.isFinite(bpm));
             if (!bpmValues.length) return 'Unavailable';
             const total = bpmValues.reduce((sum, value) => sum + value, 0);
             return `${Math.round(total / bpmValues.length)}`;
@@ -213,35 +268,6 @@ const DoctorView = () => {
         <div className="dv-root">
             {/* ── Top Bar ─────────────────────────────── */}
             <header className="dv-topbar">
-                <div className="dv-brand">
-                    <img src="/charusat-logo.svg" alt="Charusat Hospital logo" className="dv-brand-logo" />
-                    <div className="dv-brand-text">
-                        <strong>Charusat Hospital</strong>
-                        <span>Patient Monitoring</span>
-                    </div>
-                </div>
-                <div className="dv-search-box dv-search-box-active">
-                    <button
-                        className="dv-home-btn"
-                        type="button"
-                        aria-label="Go to home"
-                        onClick={() => navigate('/')}
-                    >
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-                            <path d="M12 3.2l9 7.2v10.1a1 1 0 01-1 1h-5.5a1 1 0 01-1-1v-5.2h-3v5.2a1 1 0 01-1 1H4a1 1 0 01-1-1V10.4l9-7.2z" />
-                        </svg>
-                    </button>
-                    <svg className="dv-search-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                        <circle cx="8.5" cy="8.5" r="5.5" stroke="#94a3b8" strokeWidth="1.6" />
-                        <path d="M13 13l3.5 3.5" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" />
-                    </svg>
-                    <input
-                        className="dv-search-input"
-                        placeholder="Search patient name or ID..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
                 <div className="dv-topbar-right">
                     <div className="dv-notif-btn">
                         <div className="dv-notif-dot" />
@@ -265,15 +291,49 @@ const DoctorView = () => {
 
                 {/* Title Row */}
                 <div className="dv-title-row">
-                    <div>
-                        <h1 className="dv-title">Dashboard</h1>
-                        <p className="dv-subtitle">Welcome back, Dr. Meera — here&apos;s what&apos;s happening today.</p>
+                    <div className="dv-title-copy">
+                        <h1 className="dv-title">Welcome to CHARUSAT HOSPITAL</h1>
+                        <p className="dv-subtitle">Monitoring Patient Blood Pressure in Real-Time.</p>
+                        <div className="dv-title-search dv-search-box dv-search-box-active">
+                            <button
+                                className="dv-home-btn"
+                                type="button"
+                                aria-label="Go to home"
+                                onClick={() => navigate('/')}
+                            >
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                                    <path d="M12 3.2l9 7.2v10.1a1 1 0 01-1 1h-5.5a1 1 0 01-1-1v-5.2h-3v5.2a1 1 0 01-1 1H4a1 1 0 01-1-1V10.4l9-7.2z" />
+                                </svg>
+                            </button>
+                            <svg className="dv-search-svg" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                <circle cx="8.5" cy="8.5" r="5.5" stroke="#94a3b8" strokeWidth="1.6" />
+                                <path d="M13 13l3.5 3.5" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round" />
+                            </svg>
+                            <input
+                                className="dv-search-input"
+                                placeholder="Search patient name or ID..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
-                    <div className="dv-online-badge">
-                        <span className="dv-online-dot" />
-                        {liveStatus === 'live' ? 'Firebase Live' : liveStatus === 'error' ? 'Live Sync Error' : 'Waiting for Live Data'}
+                    <div className="dv-title-actions">
+                        <button
+                            type="button"
+                            className="dv-add-patient-btn"
+                            onClick={handleOpenAddPatient}
+                        >
+                            + Add Patient
+                        </button>
+                        <div className="dv-online-badge">
+                            <span className="dv-online-dot" />
+                            {liveStatus === 'live' ? 'Firebase Live' : liveStatus === 'error' ? 'Live Sync Error' : 'Waiting for Live Data'}
+                        </div>
                     </div>
                 </div>
+                {addPatientMessage && (
+                    <div className="dv-inline-notice">{addPatientMessage}</div>
+                )}
 
                 {/* Stat Cards */}
                 <div className="dv-stats-grid">
@@ -308,7 +368,7 @@ const DoctorView = () => {
                                 <thead>
                                     <tr>
                                         <th>PATIENT / SESSION</th>
-                                        <th>IR</th>
+                                        <th>BP</th>
                                         <th>BPM</th>
                                         <th>SPO₂</th>
                                         <th>STATUS</th>
@@ -330,9 +390,9 @@ const DoctorView = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className={`dv-bp-val ${p.status === 'Critical' ? 'dv-red' : ''}`}>
-                                                {p.irDisplay || 'Unavailable'}
-                                                <div className="dv-muted">Latest IR by max index</div>
+                                            <td className={`dv-bp-val ${p.status === 'Critical' || p.status === 'Highly Critical' ? 'dv-red' : ''}`}>
+                                                {p.bp || 'Unavailable'}
+                                                <div className="dv-muted">Latest BP for this patient</div>
                                             </td>
                                             <td>{p.bpmDisplay || 'Unavailable'}</td>
                                             <td className={Number.isFinite(p.spo2) && p.spo2 < 90 ? 'dv-red' : ''}>{p.spo2Display || 'Unavailable'}</td>
@@ -385,20 +445,27 @@ const DoctorView = () => {
                                 <div className={`dv-profile-avatar dv-av-${selected.status.toLowerCase()}`}>{selected.ini}</div>
                                 <div>
                                     <h3 className="dv-profile-name">{selected.name}</h3>
-                                    <p className="dv-profile-email">{selected.name.toLowerCase().replace(/\s+/g, '')}@vitalwatch.com</p>
+                                    <p className="dv-profile-email">{selected.name.toLowerCase().replace(/\s+/g, '')}@charusathospital.com</p>
                                     <button className="dv-profile-btn" type="button">Edit Profile</button>
                                 </div>
                             </div>
                             <div className="dv-profile-grid">
                                 <div className="dv-profile-item"><span>Patient ID</span><strong>{selected.id}</strong></div>
-                                <div className="dv-profile-item"><span>Sex</span><strong>{selected.sex}</strong></div>
+                                <div className="dv-profile-item"><span>Gender</span><strong>{selected.sex}</strong></div>
                                 <div className="dv-profile-item"><span>Age</span><strong>{selected.age}</strong></div>
+                                <div className="dv-profile-item"><span>Height (cm)</span><strong>{selected.heightCm ?? 'N/A'}</strong></div>
+                                <div className="dv-profile-item"><span>Weight (kg)</span><strong>{selected.weightKg ?? 'N/A'}</strong></div>
                                 <div className="dv-profile-item"><span>Blood</span><strong>{selected.bg}</strong></div>
                                 <div className="dv-profile-item"><span>Status</span><strong>{selected.status}</strong></div>
+                                <div className="dv-profile-item"><span>Existing Conditions</span><strong>{Array.isArray(selected.existingConditions) && selected.existingConditions.length ? selected.existingConditions.join(', ') : 'None reported'}</strong></div>
+                                <div className="dv-profile-item"><span>Medications</span><strong>{selected.medications || 'None reported'}</strong></div>
+                                <div className="dv-profile-item"><span>Emergency Contact</span><strong>{selected.emergencyContact || 'N/A'}</strong></div>
+                                <div className="dv-profile-item"><span>Assigned Doctor</span><strong>{selected.assignedDoctor || 'Unassigned'}</strong></div>
+                                <div className="dv-profile-item"><span>Assigned Nurse</span><strong>{selected.assignedNurse || 'Unassigned'}</strong></div>
                                 <div className="dv-profile-item"><span>Department</span><strong>{selected.department}</strong></div>
                                 <div className="dv-profile-item"><span>Registered Date</span><strong>{selected.registered}</strong></div>
                                 <div className="dv-profile-item"><span>Appointment</span><strong>{selected.appointment}</strong></div>
-                                <div className="dv-profile-item"><span>Bed Number</span><strong>{selected.bed}</strong></div>
+                                <div className="dv-profile-item"><span>Room Number</span><strong>{selected.bed}</strong></div>
                             </div>
                         </div>
 

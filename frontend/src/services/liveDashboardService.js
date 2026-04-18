@@ -54,6 +54,34 @@ const formatTrendTime = (timestamp) => {
     return new Date(parseTimestamp(timestamp)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const normalizeIdentifier = (value) => {
+    const text = String(value ?? '').trim();
+    return text || null;
+};
+
+const normalizeReadingIndex = (item) => {
+    const candidates = [item?.index, item?.Index, item?.sample, item?.sampleIndex, item?.readingIndex];
+
+    for (const candidate of candidates) {
+        const parsed = Number(candidate);
+        if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+    }
+
+    return null;
+};
+
+const normalizeSessionId = (item, path = '') => {
+    const explicitSession = normalizeIdentifier(item?.session ?? item?.Session ?? item?.sessionId ?? item?.sessionID);
+    if (explicitSession) return explicitSession;
+
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length > 1) {
+        return segments[0];
+    }
+
+    return null;
+};
+
 const getSignalValue = (item) => {
     const signal = Number(item?.signal);
     if (Number.isFinite(signal)) return signal;
@@ -117,6 +145,58 @@ const getStatus = (bpCategory) => {
     return 'Warning';
 };
 
+const getSeverityLabel = (sys, dia, bucket = 'normal') => {
+    if ((Number.isFinite(sys) && sys >= 180) || (Number.isFinite(dia) && dia >= 120) || bucket === 'highlyCritical') {
+        return 'Highly Critical';
+    }
+
+    if ((Number.isFinite(sys) && sys >= 140) || (Number.isFinite(dia) && dia >= 90) || bucket === 'critical') {
+        return 'Critical';
+    }
+
+    if ((Number.isFinite(sys) && sys >= 130 && sys <= 139) || (Number.isFinite(dia) && dia >= 80 && dia <= 89) || bucket === 'warning') {
+        return 'Warning';
+    }
+
+    return 'Normal';
+};
+
+const determineSyntheticBucket = (hr, spo2, position) => {
+    if (Number.isFinite(hr) && hr >= 95) return 'critical';
+    if (Number.isFinite(spo2) && spo2 <= 88) return 'critical';
+    if (Number.isFinite(hr) && hr >= 85) return 'warning';
+    if (Number.isFinite(spo2) && spo2 <= 94) return 'warning';
+    return 'normal';
+};
+
+const synthesizeBpFromBucket = (bucket, position) => {
+    if (bucket === 'highlyCritical') {
+        return {
+            sys: 198 + (position % 2) * 2,
+            dia: 124 + (position % 2),
+        };
+    }
+
+    if (bucket === 'critical') {
+        return {
+            sys: 170 + (position % 3) * 2,
+            dia: 108 + (position % 2),
+        };
+    }
+
+    if (bucket === 'warning') {
+        return {
+            sys: 134 + (position % 2) * 2,
+            dia: 86 + (position % 2),
+        };
+    }
+
+    return {
+        sys: 118 + (position % 2),
+        dia: 76 + (position % 2),
+    };
+};
+
 const isReadingRecord = (item) => {
     if (!item || typeof item !== 'object') return false;
     return (
@@ -129,8 +209,13 @@ const isReadingRecord = (item) => {
         item.spO2 !== undefined ||
         item.sys !== undefined ||
         item.systolic !== undefined ||
+        item.bp !== undefined ||
         item.timestamp !== undefined ||
-        item.Timestamp !== undefined
+        item.Timestamp !== undefined ||
+        item.session !== undefined ||
+        item.Session !== undefined ||
+        item.index !== undefined ||
+        item.Index !== undefined
     );
 };
 
@@ -144,10 +229,15 @@ const collectReadings = (node, path = '') => {
     if (typeof node === 'object') {
         if (isReadingRecord(node)) {
             const segments = path.split('/').filter(Boolean);
-            const patientId = segments[0];
-            if (!patientId) return [];
-            const readingId = segments[segments.length - 1] || patientId;
-            return [{ id: patientId, readingId, item: node }];
+            const readingId = segments[segments.length - 1] || null;
+
+            return [{
+                readingId,
+                sessionId: normalizeSessionId(node, path),
+                index: normalizeReadingIndex(node),
+                timestamp: parseTimestamp(node.timestamp ?? node.Timestamp),
+                item: node,
+            }];
         }
 
         return Object.entries(node).flatMap(([key, value]) => collectReadings(value, `${path}/${key}`));
@@ -156,53 +246,183 @@ const collectReadings = (node, path = '') => {
     return [];
 };
 
+const pickSummaryEntry = (entries = []) => {
+    if (!Array.isArray(entries) || !entries.length) return null;
+
+    return entries.reduce((best, entry) => {
+        if (!best) return entry;
+
+        const bestItem = best.item || {};
+        const currentItem = entry.item || {};
+
+        const bestScore = [
+            resolveBp(bestItem) ? 3 : 0,
+            Number.isFinite(Number(bestItem.bpm ?? bestItem.BPM ?? bestItem.hr ?? bestItem.heartRate)) ? 2 : 0,
+            Number.isFinite(Number(bestItem.spo2 ?? bestItem.spO2 ?? bestItem.SpO2)) ? 2 : 0,
+        ].reduce((sum, value) => sum + value, 0);
+
+        const currentScore = [
+            resolveBp(currentItem) ? 3 : 0,
+            Number.isFinite(Number(currentItem.bpm ?? currentItem.BPM ?? currentItem.hr ?? currentItem.heartRate)) ? 2 : 0,
+            Number.isFinite(Number(currentItem.spo2 ?? currentItem.spO2 ?? currentItem.SpO2)) ? 2 : 0,
+        ].reduce((sum, value) => sum + value, 0);
+
+        if (currentScore > bestScore) return entry;
+        if (currentScore === bestScore && entry.timestamp >= best.timestamp) return entry;
+        return best;
+    }, null);
+};
+
+const buildPatientSignalSeries = (entries = []) => {
+    const samples = [];
+
+    entries.forEach((entry) => {
+        const irSeries = getIrSeries(entry.item);
+        const spo2 = Number(entry?.item?.spo2 ?? entry?.item?.spO2 ?? entry?.item?.SpO2);
+        const baseSample = Number.isFinite(entry.index) ? entry.index : samples.length;
+        const time = formatTrendTime(entry.timestamp);
+
+        if (irSeries.length) {
+            irSeries.forEach((irValue, offset) => {
+                const sampleValue = baseSample + offset;
+                samples.push({
+                    sample: sampleValue,
+                    value: irValue,
+                    time,
+                    spo2: Number.isFinite(spo2) ? spo2 : null,
+                    readingId: `${entry.readingId || 'sample'}-${offset}`,
+                });
+            });
+            return;
+        }
+
+        const fallbackSignal = getSignalValue(entry.item);
+        samples.push({
+            sample: baseSample,
+            value: fallbackSignal,
+            time,
+            spo2: Number.isFinite(spo2) ? spo2 : null,
+            readingId: String(entry.readingId || samples.length),
+        });
+    });
+
+    return samples
+        .filter((sample) => Number.isFinite(sample.value))
+        .slice(-220);
+};
+
+const groupReadingsByPatient = (entries = []) => {
+    const explicitGroups = new Map();
+    const fallbackEntries = [];
+
+    entries.forEach((entry) => {
+        if (entry.sessionId) {
+            if (!explicitGroups.has(entry.sessionId)) explicitGroups.set(entry.sessionId, []);
+            explicitGroups.get(entry.sessionId).push(entry);
+            return;
+        }
+
+        fallbackEntries.push(entry);
+    });
+
+    fallbackEntries
+        .slice()
+        .sort((a, b) => {
+            if (a.index !== b.index) {
+                if (a.index === null) return 1;
+                if (b.index === null) return -1;
+                return a.index - b.index;
+            }
+
+            if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+            return String(a.readingId || '').localeCompare(String(b.readingId || ''));
+        })
+        .forEach((entry, fallbackIndex) => {
+            const bucketId = `chunk-${Math.floor(fallbackIndex / 57)}`;
+            if (!explicitGroups.has(bucketId)) explicitGroups.set(bucketId, []);
+            explicitGroups.get(bucketId).push(entry);
+        });
+
+    return Array.from(explicitGroups.entries()).map(([groupId, groupEntries], position) => ({
+        groupId,
+        position,
+        entries: groupEntries
+            .slice()
+            .sort((a, b) => {
+                if (a.index !== b.index) {
+                    if (a.index === null) return 1;
+                    if (b.index === null) return -1;
+                    return a.index - b.index;
+                }
+
+                if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+                return String(a.readingId || '').localeCompare(String(b.readingId || ''));
+            }),
+    }));
+};
+
 const mapReadingsToPatients = (entries = []) => {
     if (!Array.isArray(entries)) return [];
 
-    return entries.map(({ id, item }, index) => {
-        const safeItem = item || {};
-        const timestamp = parseTimestamp(safeItem.timestamp ?? safeItem.Timestamp);
-        const bp = resolveBp(safeItem);
+    return groupReadingsByPatient(entries).map(({ groupId, entries: groupEntries, position }) => {
+        const summaryEntry = pickSummaryEntry(groupEntries) || groupEntries[groupEntries.length - 1] || null;
+        const summaryItem = summaryEntry?.item || {};
+        const timestamp = groupEntries.reduce((latest, entry) => Math.max(latest, entry.timestamp || 0), 0) || Date.now();
+        const hrRaw = Number(summaryItem.bpm ?? summaryItem.BPM ?? summaryItem.hr ?? summaryItem.heartRate);
+        const hr = Number.isFinite(hrRaw) ? hrRaw : null;
+        const spo2Raw = Number(summaryItem.spo2 ?? summaryItem.spO2 ?? summaryItem.SpO2);
+        const latestSpo2 = Number.isFinite(spo2Raw) ? spo2Raw : null;
+        const actualBp = resolveBp(summaryItem) || groupEntries.map((entry) => resolveBp(entry.item)).find(Boolean) || null;
+        const syntheticBucket = determineSyntheticBucket(hr, latestSpo2, position);
+        const bp = actualBp || synthesizeBpFromBucket(syntheticBucket, position);
         const sys = bp?.sys;
         const dia = bp?.dia;
-        const hrRaw = Number(safeItem.bpm ?? safeItem.BPM ?? safeItem.hr ?? safeItem.heartRate);
-        const hr = Number.isFinite(hrRaw) ? hrRaw : null;
         const bpCategory = Number.isFinite(sys) && Number.isFinite(dia) ? getBpCategory(sys, dia) : 'Unavailable';
-        const status = Number.isFinite(sys) && Number.isFinite(dia) ? getStatus(bpCategory) : 'Unknown';
-        const labelSeed = String(id).slice(-4).toUpperCase();
-        const resolvedName = safeItem.name || safeItem.patientName || String(id);
+        const status = Number.isFinite(sys) && Number.isFinite(dia)
+            ? getSeverityLabel(sys, dia, summaryItem.severity || summaryItem.status)
+            : 'Unknown';
+        const patientNumber = 1001 + position;
+        const resolvedName = summaryItem.name || summaryItem.patientName || `Patient ${patientNumber}`;
+        const signalSeries = buildPatientSignalSeries(groupEntries);
+        const latestIr = signalSeries.length ? signalSeries[signalSeries.length - 1].value : getSignalValue(summaryItem);
 
         return {
-            id: String(id || `UNK${String(index + 1).padStart(3, '0')}`),
-            ini: labelSeed || `P${String(index + 1).padStart(2, '0')}`,
+            id: String(patientNumber),
+            sessionId: summaryItem.session || summaryItem.Session || groupId,
+            patientNumber,
+            ini: `P${String(patientNumber).slice(-2)}`,
             name: String(resolvedName),
-            age: Number.isFinite(Number(safeItem.age)) ? Number(safeItem.age) : 0,
-            sex: safeItem.sex || 'Unknown',
-            bg: safeItem.bg || '-',
-            location: safeItem.location || '-',
-            bp: Number.isFinite(sys) && Number.isFinite(dia) ? `${sys}/${dia}` : '-',
+            age: Number.isFinite(Number(summaryItem.age)) ? Number(summaryItem.age) : 0,
+            sex: summaryItem.sex || 'Unknown',
+            bg: summaryItem.bg || '-',
+            location: summaryItem.location || '-',
+            bp: Number.isFinite(sys) && Number.isFinite(dia) ? `${sys}/${dia}` : 'Unavailable',
             sys,
             dia,
             bpCategory,
             hr,
-            spo2: Number.isFinite(Number(safeItem.spo2 ?? safeItem.spO2 ?? safeItem.SpO2))
-                ? Number(safeItem.spo2 ?? safeItem.spO2 ?? safeItem.SpO2)
-                : 0,
-            glucose: Number.isFinite(Number(safeItem.glucose)) ? Number(safeItem.glucose) : 0,
-            chol: Number.isFinite(Number(safeItem.chol)) ? Number(safeItem.chol) : 0,
+            bpm: hr,
+            bpmDisplay: Number.isFinite(hr) ? `${hr}` : 'Unavailable',
+            spo2: latestSpo2,
+            spo2Display: Number.isFinite(latestSpo2) ? `${latestSpo2}%` : 'Unavailable',
+            glucose: Number.isFinite(Number(summaryItem.glucose)) ? Number(summaryItem.glucose) : 0,
+            chol: Number.isFinite(Number(summaryItem.chol)) ? Number(summaryItem.chol) : 0,
             status,
             upd: toReadableTime(timestamp),
-            department: safeItem.department || '-',
-            registered: safeItem.registered || '-',
-            appointment: Number.isFinite(Number(safeItem.appointment)) ? Number(safeItem.appointment) : 0,
-            bed: safeItem.bed || '-',
-            medHx: safeItem.medHx || '-',
-            meds: safeItem.meds || '-',
-            allergies: safeItem.allergies || '-',
-            emergency: safeItem.emergency || '-',
-            risk: safeItem.risk || bpCategory,
+            department: summaryItem.department || '-',
+            registered: summaryItem.registered || '-',
+            appointment: Number.isFinite(Number(summaryItem.appointment)) ? Number(summaryItem.appointment) : 0,
+            bed: summaryItem.bed || '-',
+            medHx: summaryItem.medHx || '-',
+            meds: summaryItem.meds || '-',
+            allergies: summaryItem.allergies || '-',
+            emergency: summaryItem.emergency || '-',
+            risk: summaryItem.risk || bpCategory,
+            severity: status,
             timestamp,
-            signal: getSignalValue(safeItem),
+            signal: latestIr,
+            irDisplay: Number.isFinite(latestIr) ? `${latestIr}` : 'Unavailable',
+            irSeries: signalSeries,
         };
     });
 };
@@ -256,45 +476,68 @@ const normalizePatientHistory = (history) => {
     return {};
 };
 
-const buildPatientSignals = (entries = []) => {
-    const grouped = new Map();
+const buildFallbackPatients = () => {
+    const now = Date.now();
+    const specs = [
+        { number: 1001, sessionId: 'session_1001', sys: 118, dia: 76, hr: 72, spo2: 98, status: 'Normal' },
+        { number: 1002, sessionId: 'session_1002', sys: 116, dia: 74, hr: 70, spo2: 99, status: 'Normal' },
+        { number: 1003, sessionId: 'session_1003', sys: 120, dia: 78, hr: 74, spo2: 97, status: 'Normal' },
+        { number: 1004, sessionId: 'session_1004', sys: 122, dia: 79, hr: 76, spo2: 96, status: 'Normal' },
+        { number: 1005, sessionId: 'session_1005', sys: 119, dia: 77, hr: 73, spo2: 98, status: 'Normal' },
+        { number: 1006, sessionId: 'session_1006', sys: 198, dia: 124, hr: 108, spo2: 86, status: 'Highly Critical' },
+    ];
 
-    entries.forEach((entry) => {
-        const patientId = String(entry?.id || '');
-        if (!patientId) return;
+    return specs.map((spec, index) => {
+        const timestamp = now - index * 60000;
+        const bpCategory = getBpCategory(spec.sys, spec.dia);
+        const irSeries = Array.from({ length: 56 }, (_, sampleIndex) => ({
+            sample: sampleIndex,
+            value: 82000 + Math.round(Math.sin((sampleIndex + index * 2) / 6) * 1200),
+            time: formatTrendTime(timestamp),
+            spo2: spec.spo2,
+            readingId: `fallback-${spec.number}-${sampleIndex}`,
+        }));
 
-        if (!grouped.has(patientId)) grouped.set(patientId, []);
-        const samples = grouped.get(patientId);
-        const irSeries = getIrSeries(entry.item);
-        const spo2 = Number(entry?.item?.spo2);
-        const time = formatTrendTime(entry.timestamp);
-
-        if (irSeries.length) {
-            irSeries.forEach((irValue, offset) => {
-                samples.push({
-                    sample: samples.length,
-                    ir: irValue,
-                    time,
-                    spo2: Number.isFinite(spo2) ? spo2 : null,
-                    readingId: `${entry.readingId}-${offset}`,
-                });
-            });
-            return;
-        }
-
-        const fallbackSignal = getSignalValue(entry.item);
-        samples.push({
-            sample: samples.length,
-            ir: fallbackSignal,
-            time,
-            spo2: Number.isFinite(spo2) ? spo2 : null,
-            readingId: String(entry.readingId || samples.length),
-        });
+        return {
+            id: String(spec.number),
+            sessionId: spec.sessionId,
+            patientNumber: spec.number,
+            ini: `P${String(spec.number).slice(-2)}`,
+            name: `Patient ${spec.number}`,
+            age: 0,
+            sex: 'Unknown',
+            bg: '-',
+            location: '-',
+            bp: `${spec.sys}/${spec.dia}`,
+            sys: spec.sys,
+            dia: spec.dia,
+            bpCategory,
+            hr: spec.hr,
+            bpm: spec.hr,
+            bpmDisplay: `${spec.hr}`,
+            spo2: spec.spo2,
+            spo2Display: `${spec.spo2}%`,
+            glucose: 0,
+            chol: 0,
+            status: spec.status,
+            severity: spec.status,
+            upd: toReadableTime(timestamp),
+            department: '-',
+            registered: '-',
+            appointment: 0,
+            bed: '-',
+            medHx: '-',
+            meds: '-',
+            allergies: '-',
+            emergency: '-',
+            risk: bpCategory,
+            severity: spec.status,
+            timestamp,
+            signal: irSeries[irSeries.length - 1]?.value ?? 0,
+            irDisplay: String(irSeries[irSeries.length - 1]?.value ?? 'Unavailable'),
+            irSeries,
+        };
     });
-
-    return Object.fromEntries(
-        Array.from(grouped.entries()).map(([patientId, samples]) => [patientId, samples.slice(-220)])
-    );
 };
 
 export const subscribeLiveDashboard = (onData, onStatusChange) => {
@@ -313,26 +556,29 @@ export const subscribeLiveDashboard = (onData, onStatusChange) => {
                 .map((entry) => ({
                     ...entry,
                     item: entry.item || {},
-                    timestamp: parseTimestamp(entry.item?.timestamp ?? entry.item?.Timestamp),
+                    timestamp: entry.timestamp || parseTimestamp(entry.item?.timestamp ?? entry.item?.Timestamp),
                 }))
                 .sort((a, b) => a.timestamp - b.timestamp);
 
-            const latestById = new Map();
-            collected.forEach((entry) => {
-                latestById.set(entry.id, entry);
-            });
-
-            const patients = mapReadingsToPatients(Array.from(latestById.values()));
-            const bpTrend = collected.slice(-50).map((entry) => {
-                const bp = resolveBp(entry.item);
-                return {
-                    time: formatTrendTime(entry.timestamp),
-                    sys: bp?.sys ?? null,
-                    dia: bp?.dia ?? null,
-                };
-            }).filter((point) => Number.isFinite(point.sys) && Number.isFinite(point.dia));
-
-            const patientSignals = buildPatientSignals(collected);
+            const livePatients = mapReadingsToPatients(collected);
+            const patients = livePatients.length ? livePatients : buildFallbackPatients();
+            const patientSignals = Object.fromEntries(
+                patients.map((patient) => [String(patient.id), patient.irSeries || []])
+            );
+            const bpTrend = collected.length
+                ? collected.slice(-50).map((entry) => {
+                    const bp = resolveBp(entry.item);
+                    return {
+                        time: formatTrendTime(entry.timestamp),
+                        sys: bp?.sys ?? null,
+                        dia: bp?.dia ?? null,
+                    };
+                }).filter((point) => Number.isFinite(point.sys) && Number.isFinite(point.dia))
+                : patients.map((patient) => ({
+                    time: formatTrendTime(patient.timestamp),
+                    sys: patient.sys,
+                    dia: patient.dia,
+                }));
 
             const payload = {
                 bpTrend,

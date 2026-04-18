@@ -1,0 +1,219 @@
+.add-patient-page {
+    min-height: 100vh;
+    padding: 2rem;
+    background:
+        radial-gradient(circle at top left, rgba(15, 92, 189, 0.10), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+.add-patient-header {
+    max-width: 1180px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.add-patient-eyebrow {
+    margin: 0 0 0.35rem;
+    color: #2563eb;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.add-patient-header h1 {
+    margin: 0;
+    font-size: 2.2rem;
+    color: #0f172a;
+}
+
+.add-patient-subtitle {
+    margin: 0.45rem 0 0;
+    color: #64748b;
+    max-width: 760px;
+    line-height: 1.6;
+}
+
+.add-patient-back-btn {
+    align-self: center;
+    text-decoration: none;
+    background: #ffffff;
+    color: #0f5cbd;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0.7rem 1rem;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgba(15, 92, 189, 0.08);
+}
+
+.add-patient-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.add-patient-form {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 24px;
+    box-shadow: 0 18px 50px rgba(15, 92, 189, 0.08);
+    padding: 1.5rem;
+}
+
+.add-patient-section + .add-patient-section {
+    margin-top: 1.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.add-patient-section h2 {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    color: #0f172a;
+}
+
+.form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.form-grid.two-col {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.field-block.full-width {
+    grid-column: 1 / -1;
+}
+
+.field-block label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1e3a62;
+}
+
+.field-block input,
+.field-block select,
+.field-block textarea {
+    width: 100%;
+    border: 1px solid #cfe0fb;
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    font: inherit;
+    color: #163455;
+    background: #fff;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.field-block input:focus,
+.field-block select:focus,
+.field-block textarea:focus {
+    border-color: #2f7dcf;
+    box-shadow: 0 0 0 4px rgba(47, 125, 207, 0.14);
+}
+
+.field-block textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.condition-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.condition-option {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 0.85rem 0.95rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #1e3a62;
+}
+
+.condition-option input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #2563eb;
+}
+
+.field-error {
+    font-size: 0.8rem;
+    color: #b42318;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.9rem;
+    margin-top: 1.5rem;
+}
+
+.secondary-btn,
+.primary-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 0.8rem 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.secondary-btn {
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.primary-btn {
+    background: linear-gradient(135deg, #0f5cbd, #2563eb);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+}
+
+@media (max-width: 900px) {
+    .add-patient-header {
+        flex-direction: column;
+    }
+
+    .add-patient-back-btn {
+        align-self: flex-start;
+    }
+
+    .form-grid.two-col,
+    .condition-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .add-patient-page {
+        padding: 1rem;
+    }
+
+    .add-patient-form {
+        padding: 1rem;
+        border-radius: 18px;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .secondary-btn,
+    .primary-btn {
+        width: 100%;
+    }
+}

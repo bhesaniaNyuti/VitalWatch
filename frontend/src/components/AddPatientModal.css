@@ -138,6 +138,31 @@
     cursor: pointer;
 }
 
+.condition-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+.condition-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #ffffff;
+    border: 1px solid var(--neutral-200);
+    border-radius: 10px;
+    padding: 0.55rem 0.65rem;
+    font-size: var(--font-size-xs);
+    color: var(--neutral-700);
+    cursor: pointer;
+}
+
+.condition-option input {
+    width: 0.95rem;
+    height: 0.95rem;
+    accent-color: #ef4444;
+}
+
 .input-error {
     border-color: var(--status-critical) !important;
 }
@@ -170,6 +195,10 @@
     }
 
     .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .condition-grid {
         grid-template-columns: 1fr;
     }
 

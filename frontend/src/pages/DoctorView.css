@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   VitalWatch — Doctor Dashboard  (dv- prefix)
+    CHARUSAT HOSPITAL — Doctor Dashboard  (dv- prefix)
    ═══════════════════════════════════════════════════ */
 
 /* Ensure full-width layout */
@@ -11,7 +11,7 @@
 .dv-root {
     width: 100%;
     min-height: 100vh;
-    background: #f1f5f9;
+    background: linear-gradient(180deg, #ffffff 0%, #edf5ff 100%);
     font-family: 'Inter', system-ui, sans-serif;
     color: #1e293b;
 }
@@ -27,7 +27,7 @@
     padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.75rem;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
@@ -43,7 +43,7 @@
     height: 2.3rem;
     border-radius: 8px;
     border: 1px solid #bfdbfe;
-    object-fit: cover;
+    object-fit: contain;
     background: #ffffff;
     box-shadow: 0 6px 14px rgba(15, 92, 189, 0.15);
 }
@@ -190,6 +190,56 @@
     align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 1.5rem;
+}
+
+.dv-title-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.dv-title-search {
+    width: fit-content;
+    margin-top: 0.15rem;
+}
+
+.dv-title-search .dv-search-input {
+    width: 360px;
+}
+
+.dv-title-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dv-add-patient-btn {
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #0f5cbd, #2563eb);
+    color: #ffffff;
+    padding: 0.52rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 18px rgba(37, 99, 235, 0.24);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dv-add-patient-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 22px rgba(37, 99, 235, 0.28);
+}
+
+.dv-inline-notice {
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 .dv-title {
@@ -510,6 +560,7 @@
 }
 
 .dv-badge-critical { background: #fee2e2; color: #dc2626; }
+.dv-badge-highly-critical { background: #7f1d1d; color: #fff1f2; }
 .dv-badge-warning  { background: #fef3c7; color: #d97706; }
 .dv-badge-normal   { background: #dcfce7; color: #16a34a; }
 
@@ -707,6 +758,7 @@
     font-size: 0.92rem;
     color: #111827;
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .dv-vitals-section,
@@ -845,6 +897,7 @@
     .dv-vitals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dv-profile-top { grid-template-columns: 1fr; }
     .dv-profile-user { border-right: none; border-bottom: 1px solid #e2e8f0; }
+    .dv-title-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
 }
 
 @media (max-width: 680px) {
@@ -853,7 +906,10 @@
     .dv-topbar        { padding: 0.6rem 1rem; }
     .dv-search-box    { width: auto; }
     .dv-search-input  { width: 130px; }
+    .dv-title-search { width: 100%; }
+    .dv-title-search .dv-search-input { width: 100%; min-width: 0; }
     .dv-vitals-grid   { grid-template-columns: 1fr; }
     .dv-profile-grid  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dv-detail-card   { padding: 0.75rem; }
+    .dv-add-patient-btn { width: 100%; }
 }

@@ -1,8 +1,9 @@
 import api from './api';
 
 class AuthService {
-    async login(email, password) {
-        const response = await api.post('/auth/login', { email, password });
+    async login(email, password, role) {
+        const payload = role ? { email, password, role } : { email, password };
+        const response = await api.post('/auth/login', payload);
         if (response.data.token) {
             localStorage.setItem('user', JSON.stringify(response.data));
         }
@@ -10,7 +11,11 @@ class AuthService {
     }
 
     async register(userInfo) {
-        return api.post('/auth/register', userInfo);
+        const payload = {
+            ...userInfo,
+            role: userInfo?.role || 'patient',
+        };
+        return api.post('/auth/register', payload);
     }
 
     logout() {

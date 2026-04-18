@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Primary Colors - Medical Red Theme */
-  --primary-red: #EF4444;
-  --primary-red-dark: #DC2626;
-  --primary-red-light: #FEE2E2;
-  --primary-red-hover: #B91C1C;
+  /* Primary Colors - Blue Hospital Theme */
+  --primary-red: #0F5CBD;
+  --primary-red-dark: #0B4A99;
+  --primary-red-light: #DBEAFF;
+  --primary-red-hover: #0A3F82;
 
   /* Neutral Colors */
   --neutral-50: #F9FAFB;

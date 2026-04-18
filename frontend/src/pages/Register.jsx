@@ -1,175 +1,156 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import './Login.css';
 
-const Register = () => {
+const REGISTER_ROLES = ['doctor', 'nurse'];
+
+const roleLabel = (role) => `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
+
+const Register = ({ defaultRole = null }) => {
+    const location = useLocation();
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        confirmPassword: '',
-    });
+    const routeRole = useMemo(() => {
+        if (location.pathname.includes('/doctor/')) return 'doctor';
+        if (location.pathname.includes('/nurse/')) return 'nurse';
+        return null;
+    }, [location.pathname]);
+    const fixedRole = defaultRole || routeRole;
+    const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
+    const [selectedRole, setSelectedRole] = useState(fixedRole || 'doctor');
     const [errors, setErrors] = useState({});
     const [serverError, setServerError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-        if (errors[e.target.name]) {
-            setErrors({ ...errors, [e.target.name]: '' });
-        }
-        setServerError(''); // Clear server error on input change
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+        setFormData((current) => ({ ...current, [name]: value }));
+        setErrors((current) => ({ ...current, [name]: '' }));
+        setServerError('');
     };
 
     const validateForm = () => {
-        const newErrors = {};
+        const nextErrors = {};
 
-        if (!formData.email) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email is invalid';
-        }
+        if (!formData.email) nextErrors.email = 'Email is required.';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) nextErrors.email = 'Enter a valid email address.';
 
-        if (!formData.password) {
-            newErrors.password = 'Password is required';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Password must be at least 6 characters';
-        }
+        if (!formData.password) nextErrors.password = 'Password is required.';
+        else if (formData.password.length < 6) nextErrors.password = 'Use at least 6 characters.';
 
-        if (!formData.confirmPassword) {
-            newErrors.confirmPassword = 'Confirm password is required';
-        } else if (formData.confirmPassword !== formData.password) {
-            newErrors.confirmPassword = 'Passwords do not match';
-        }
+        if (!formData.confirmPassword) nextErrors.confirmPassword = 'Confirm your password.';
+        else if (formData.confirmPassword !== formData.password) nextErrors.confirmPassword = 'Passwords do not match.';
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        setErrors(nextErrors);
+        return Object.keys(nextErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (event) => {
+        event.preventDefault();
         setServerError('');
         setLoading(true);
 
-        if (validateForm()) {
-            try {
-                const derivedName = String(formData.email).split('@')[0] || 'user';
-                await authService.register({
-                    name: derivedName,
-                    email: formData.email,
-                    password: formData.password,
-                });
-                navigate('/login');
-            } catch (err) {
-                const message = err.response && err.response.data && err.response.data.message
-                    ? err.response.data.message
-                    : err.message;
-                setServerError(message);
-            } finally {
-                setLoading(false);
-            }
-        } else {
+        if (!validateForm()) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const derivedName = String(formData.email).split('@')[0] || 'user';
+            await authService.register({
+                name: derivedName,
+                email: formData.email,
+                password: formData.password,
+                role: fixedRole || selectedRole,
+            });
+            navigate(fixedRole ? `/${fixedRole}/login` : '/login');
+        } catch (err) {
+            const message = err.response?.data?.message || err.message || 'Registration failed.';
+            setServerError(message);
+        } finally {
             setLoading(false);
         }
     };
 
     return (
         <div className="auth-page">
-            <div className="auth-shell">
-                <header className="auth-header">
-                    <img
-                        src="/charusat-hospital-logo.svg"
-                        alt="Charusat Hospital Logo"
-                        className="auth-logo-image"
-                    />
-                    <div className="auth-menu">☰</div>
-                </header>
+            <div className="auth-card">
+                <img src="/charusat-hospital-logo.svg" alt="CHARUSAT Hospital logo" className="auth-logo" />
+                <h1>{fixedRole ? `${roleLabel(fixedRole)} Signup` : 'Create account'}</h1>
+                <p className="auth-subtitle">Join the CHARUSAT Hospital monitoring dashboard.</p>
 
-                <div className="auth-body">
-                    <section className="auth-visual">
-                        <img
-                            src="/doctor-illustration.svg"
-                            alt="Doctor illustration"
-                            className="auth-visual-image"
+                <form className="auth-form" onSubmit={handleSubmit}>
+                    {serverError && <div className="auth-error">{serverError}</div>}
+
+                    {!fixedRole && (
+                        <label className="auth-field">
+                            <span>Register as</span>
+                            <select
+                                name="role"
+                                value={selectedRole}
+                                onChange={(event) => setSelectedRole(event.target.value)}
+                            >
+                                {REGISTER_ROLES.map((role) => (
+                                    <option key={role} value={role}>
+                                        {roleLabel(role)}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    )}
+
+                    <label className="auth-field">
+                        <span>Email</span>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="doctor@charusat.com"
+                            autoComplete="email"
                         />
-                        <p>Realtime patient insights with calm, clear workflows.</p>
-                    </section>
+                    </label>
+                    {errors.email && <div className="auth-error">{errors.email}</div>}
 
-                    <section className="auth-panel">
-                        <div className="auth-tabs">
-                            <Link to="/login" className="auth-tab">Login</Link>
-                            <Link to="/register" className="auth-tab auth-tab-active">Register</Link>
-                        </div>
+                    <label className="auth-field">
+                        <span>Password</span>
+                        <input
+                            type="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="Create a password"
+                            autoComplete="new-password"
+                        />
+                    </label>
+                    {errors.password && <div className="auth-error">{errors.password}</div>}
 
-                        <p className="auth-caption">Create account using email and password</p>
+                    <label className="auth-field">
+                        <span>Confirm password</span>
+                        <input
+                            type="password"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            placeholder="Repeat the password"
+                            autoComplete="new-password"
+                        />
+                    </label>
+                    {errors.confirmPassword && <div className="auth-error">{errors.confirmPassword}</div>}
 
-                        <form className="auth-form" onSubmit={handleSubmit}>
-                            {serverError && <div className="auth-error">{serverError}</div>}
+                    <button type="submit" disabled={loading}>
+                        {loading ? 'Creating...' : 'Register'}
+                    </button>
+                </form>
 
-                            <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔒</span>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    placeholder="Your Email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    autoComplete="email"
-                                />
-                            </div>
-                            {errors.email && <div className="auth-error">{errors.email}</div>}
-
-                            <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔒</span>
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    placeholder="Your Password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    autoComplete="new-password"
-                                />
-                                <span className="auth-input-eye">👁</span>
-                            </div>
-                            {errors.password && <div className="auth-error">{errors.password}</div>}
-
-                            <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔒</span>
-                                <input
-                                    type="password"
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    placeholder="Confirm Password"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    autoComplete="new-password"
-                                />
-                                <span className="auth-input-eye">👁</span>
-                            </div>
-                            {errors.confirmPassword && <div className="auth-error">{errors.confirmPassword}</div>}
-
-                            <button type="submit" disabled={loading}>
-                                {loading ? 'Creating...' : 'Register'}
-                            </button>
-                        </form>
-
-                        <div className="auth-links">
-                            <span>
-                                Already have an account? <Link to="/login">Login</Link>
-                            </span>
-                            <a href="#">Forgot Password?</a>
-                        </div>
-
-                        <div className="auth-or"><span>or</span></div>
-                        <a className="auth-forgot" href="#">Forgot Password?</a>
-                    </section>
-                </div>
+                <p className="auth-switch">
+                    Already have an account? <Link to={fixedRole ? `/${fixedRole}/login` : '/login'}>Login</Link>
+                </p>
+                {!fixedRole && (
+                    <p className="auth-switch">
+                        Quick links: <Link to="/doctor/signup">Doctor Signup</Link> | <Link to="/nurse/signup">Nurse Signup</Link>
+                    </p>
+                )}
             </div>
         </div>
     );

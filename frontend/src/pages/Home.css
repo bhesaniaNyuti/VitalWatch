@@ -1,68 +1,95 @@
 /* Home Page Styles */
 
 /* Navbar */
+/* ================= NAVBAR (FINAL UPDATED) ================= */
+
 .home-navbar {
-    background: white;
-    border-bottom: 1px solid var(--neutral-100);
-    padding: 1rem 0;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.75rem 2.5rem;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
+/* Layout */
 .navbar-content {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative; /* needed for centered nav */
 }
+
+/* ================= LOGO ================= */
 
 .navbar-logo {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
     text-decoration: none;
-    color: var(--neutral-900);
-    font-weight: 700;
-    font-size: var(--font-size-xl);
+    flex-shrink: 0;
+    z-index: 2;
 }
 
 .logo-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #bfdbfe;
-    box-shadow: 0 6px 14px rgba(15, 92, 189, 0.14);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
     overflow: hidden;
+    background: rgba(37, 99, 235, 0.05); /* subtle premium feel */
+    border: 1px solid #c7dcff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
 }
 
 .logo-icon img {
+    display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
+/* ================= NAVIGATION (CENTERED) ================= */
+
 .navbar-nav {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    
     display: flex;
-    align-items: center;
     gap: 2rem;
     list-style: none;
 }
 
 .navbar-nav a {
     text-decoration: none;
-    color: var(--neutral-600);
+    color: #6b7280;
     font-weight: 500;
-    transition: color var(--transition-base);
+    position: relative;
+    padding-bottom: 4px;
+    transition: color 0.2s ease;
+}
+
+/* Hover underline animation */
+.navbar-nav a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 0%;
+    height: 2px;
+    background: #2563eb;
+    transition: width 0.3s ease;
 }
 
 .navbar-nav a:hover {
-    color: var(--primary-red);
+    color: #2563eb;
 }
+
+.navbar-nav a:hover::after {
+    width: 100%;
+}
+
+/* ================= RIGHT SIDE ================= */
 
 .navbar-actions {
     display: flex;
@@ -70,109 +97,146 @@
     gap: 1rem;
 }
 
+/* Notification */
 .notification-icon {
     position: relative;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: var(--radius-md);
-    background: var(--neutral-50);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #f3f4f6;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all var(--transition-base);
+    transition: 0.2s;
 }
 
 .notification-icon:hover {
-    background: var(--neutral-100);
+    background: #e5e7eb;
 }
 
 .notification-badge {
     position: absolute;
     top: -4px;
     right: -4px;
-    width: 1.25rem;
-    height: 1.25rem;
-    background: var(--primary-red);
+    width: 18px;
+    height: 18px;
+    background: #2563eb;
     color: white;
     border-radius: 50%;
-    font-size: 0.625rem;
+    font-size: 10px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
+/* Avatar */
 .user-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: var(--primary-red-light);
-    color: var(--primary-red);
+    background: #dbeafe;
+    color: #2563eb;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition-base);
+    transition: 0.2s;
 }
 
 .user-avatar:hover {
     transform: scale(1.05);
 }
 
-/* Hero Section */
+/* Hero Section (FINAL UPDATED) */
 .hero-section {
-    padding: 5rem 0;
-    background: linear-gradient(140deg, #f5f9ff 0%, #ffffff 55%, #eef6ff 100%);
+    padding: 6rem 0;
+    min-height: 72vh;
+    display: flex;
+    align-items: center;
+
+    /* ✅ Updated background with correct styling */
+    background-image:
+        linear-gradient(120deg, rgba(8, 26, 45, 0.6) 0%, rgba(8, 26, 45, 0.5) 50%, rgba(8, 26, 45, 0.65) 100%),
+        url('../assets/images/hospital.png');
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
     position: relative;
     overflow: hidden;
 }
 
+/* ✅ Stronger overlay for readability */
 .hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ Soft blue glow effect */
+.hero-section::after {
     content: '';
     position: absolute;
     top: -50%;
     right: -10%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(15, 92, 189, 0.08) 0%, transparent 70%);
+    width: 560px;
+    height: 560px;
+    background: radial-gradient(circle, rgba(170, 215, 255, 0.25) 0%, transparent 70%);
     border-radius: 50%;
 }
 
+/* ✅ Keep content above overlay */
 .hero-content {
     text-align: center;
     max-width: 900px;
     margin: 0 auto;
     position: relative;
-    z-index: 1;
+    z-index: 2;
 }
 
+/* Badge */
 .hero-badge {
     margin-bottom: 2rem;
     display: inline-block;
 }
 
+.hero-badge .badge {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    backdrop-filter: blur(6px); /* 🔥 improved glass effect */
+}
+
+/* Title */
 .hero-title {
     font-size: 3.5rem;
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: 1.5rem;
-    color: var(--neutral-900);
+    color: #ffffff;
+    text-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); /* 🔥 stronger depth */
 }
 
 .hero-title .highlight {
-    color: var(--primary-red);
+    color: #bfdbfe;
 }
 
+/* Subtitle */
 .hero-subtitle {
     font-size: var(--font-size-xl);
-    color: var(--neutral-600);
+    color: #e2e8f0;
     max-width: 700px;
     margin: 0 auto 2.5rem;
     line-height: 1.7;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
 }
 
+/* Buttons */
 .hero-actions {
     display: flex;
     gap: 1rem;
@@ -181,53 +245,82 @@
     flex-wrap: wrap;
 }
 
+/* Arrow animation */
 .arrow-icon {
     margin-left: 0.5rem;
     transition: transform var(--transition-base);
 }
 
 .btn-primary:hover .arrow-icon {
-    transform: translateX(4px);
+    transform: translateX(6px); /* smoother motion */
 }
 
 /* Stats Section */
 .stats-section {
-    padding: 3rem 0;
+    padding: 2.25rem 0;
     background: white;
 }
 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 3rem;
-    max-width: 900px;
+    gap: 1.2rem;
+    max-width: 840px;
     margin: 0 auto;
 }
 
 .stat-item {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #e5edf8;
+    border-radius: 16px;
+    padding: 1rem 0.8rem;
+    box-shadow: 0 6px 18px rgba(15, 92, 189, 0.08);
     text-align: center;
+    transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+    animation: statCardIn 650ms ease both;
+}
+
+.stat-item:nth-child(1) { animation-delay: 80ms; }
+.stat-item:nth-child(2) { animation-delay: 170ms; }
+.stat-item:nth-child(3) { animation-delay: 260ms; }
+
+.stat-item:hover {
+    transform: translateY(-4px);
+    border-color: #c8ddfb;
+    box-shadow: 0 14px 24px rgba(15, 92, 189, 0.15);
+}
+
+@keyframes statCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .stat-icon {
-    width: 4rem;
-    height: 4rem;
-    margin: 0 auto 1rem;
+    width: 3.2rem;
+    height: 3.2rem;
+    margin: 0 auto 0.7rem;
     border-radius: var(--radius-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
+    font-size: 1.6rem;
 }
 
 .stat-value {
-    font-size: var(--font-size-4xl);
+    font-size: 2rem;
     font-weight: 800;
     color: var(--neutral-900);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
 }
 
 .stat-label {
-    font-size: var(--font-size-base);
+    font-size: 0.92rem;
     color: var(--neutral-600);
     font-weight: 500;
 }
@@ -259,45 +352,64 @@
 .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
+    gap: 1.35rem;
 }
 
 .feature-card {
     background: white;
-    padding: 2rem;
+    padding: 1.35rem;
     border-radius: var(--radius-xl);
     border: 1px solid var(--neutral-100);
-    transition: all var(--transition-base);
+    transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+    animation: featureCardIn 600ms ease both;
 }
 
 .feature-card:hover {
-    transform: translateY(-8px);
+    transform: translateY(-6px) scale(1.01);
     box-shadow: var(--shadow-xl);
     border-color: #bfdbfe;
 }
 
+.feature-card:nth-child(1) { animation-delay: 60ms; }
+.feature-card:nth-child(2) { animation-delay: 130ms; }
+.feature-card:nth-child(3) { animation-delay: 200ms; }
+.feature-card:nth-child(4) { animation-delay: 270ms; }
+.feature-card:nth-child(5) { animation-delay: 340ms; }
+.feature-card:nth-child(6) { animation-delay: 410ms; }
+
+@keyframes featureCardIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .feature-icon {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 3rem;
+    height: 3rem;
     border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.75rem;
-    margin-bottom: 1.5rem;
+    font-size: 1.45rem;
+    margin-bottom: 1rem;
 }
 
 .feature-title {
-    font-size: var(--font-size-xl);
+    font-size: 1.08rem;
     font-weight: 700;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.55rem;
     color: var(--neutral-900);
 }
 
 .feature-description {
-    font-size: var(--font-size-base);
+    font-size: 0.94rem;
     color: var(--neutral-600);
-    line-height: 1.7;
+    line-height: 1.55;
 }
 
 /* Dashboard Preview Section */
@@ -520,6 +632,62 @@
 
 .patient-card.status-normal .chart-bar {
     background: var(--status-normal);
+}
+
+.patient-details-grid {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.patient-detail {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 9px;
+    padding: 0.34rem 0.48rem;
+}
+
+.patient-detail-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.patient-detail-value {
+    font-size: 0.7rem;
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+}
+
+.patient-doctor-row {
+    margin-top: 0.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.patient-doctor-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.patient-doctor-badge {
+    font-size: 0.7rem;
+    color: #1d4ed8;
+    font-weight: 700;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 0.22rem 0.52rem;
+    white-space: nowrap;
 }
 
 /* Recent Alerts */

@@ -2,32 +2,60 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import './AddPatientModal.css';
 
+const EXISTING_CONDITION_OPTIONS = ['Hypertension', 'Diabetes', 'Heart issues'];
+
+const initialFormState = {
+    fullName: '',
+    age: '',
+    gender: '',
+    heightCm: '',
+    weightKg: '',
+    existingConditions: [],
+    medications: '',
+    emergencyContact: '',
+    assignedDoctor: '',
+    assignedNurse: '',
+    roomNumber: '',
+};
+
 const AddPatientModal = ({ isOpen, onClose, onSubmit }) => {
-    const [formData, setFormData] = useState({
-        name: '',
-        age: '',
-        room: '',
-        gender: 'male',
-        medicalHistory: ''
-    });
+    const [formData, setFormData] = useState(initialFormState);
 
     const [errors, setErrors] = useState({});
 
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value, type, checked } = e.target;
+        if (type === 'checkbox') {
+            setFormData((current) => {
+                const currentValues = current.existingConditions || [];
+                const nextValues = checked
+                    ? [...currentValues, value]
+                    : currentValues.filter((item) => item !== value);
+                return {
+                    ...current,
+                    existingConditions: nextValues,
+                };
+            });
+        } else {
+            setFormData((current) => ({
+                ...current,
+                [name]: value,
+            }));
+        }
+
         if (errors[e.target.name]) {
             setErrors({ ...errors, [e.target.name]: '' });
+        }
+        if (type === 'checkbox' && errors.existingConditions) {
+            setErrors({ ...errors, existingConditions: '' });
         }
     };
 
     const validateForm = () => {
         const newErrors = {};
 
-        if (!formData.name || formData.name.trim() === '') {
-            newErrors.name = 'Patient name is required';
+        if (!formData.fullName || formData.fullName.trim() === '') {
+            newErrors.fullName = 'Full name is required';
         }
 
         if (!formData.age) {
@@ -36,8 +64,26 @@ const AddPatientModal = ({ isOpen, onClose, onSubmit }) => {
             newErrors.age = 'Please enter a valid age';
         }
 
-        if (!formData.room || formData.room.trim() === '') {
-            newErrors.room = 'Room number is required';
+        if (!formData.gender) {
+            newErrors.gender = 'Gender is required';
+        }
+
+        if (!Array.isArray(formData.existingConditions) || !formData.existingConditions.length) {
+            newErrors.existingConditions = 'Select at least one existing condition';
+        }
+
+        if (!formData.emergencyContact || formData.emergencyContact.trim() === '') {
+            newErrors.emergencyContact = 'Emergency contact is required';
+        } else if (!/^\+?[0-9\-\s]{8,15}$/.test(formData.emergencyContact.trim())) {
+            newErrors.emergencyContact = 'Enter a valid contact number';
+        }
+
+        if (!formData.assignedDoctor || formData.assignedDoctor.trim() === '') {
+            newErrors.assignedDoctor = 'Assigned doctor is required';
+        }
+
+        if (!formData.roomNumber || formData.roomNumber.trim() === '') {
+            newErrors.roomNumber = 'Room number is required';
         }
 
         setErrors(newErrors);
@@ -49,26 +95,13 @@ const AddPatientModal = ({ isOpen, onClose, onSubmit }) => {
 
         if (validateForm()) {
             onSubmit(formData);
-            // Reset form
-            setFormData({
-                name: '',
-                age: '',
-                room: '',
-                gender: 'male',
-                medicalHistory: ''
-            });
+            setFormData(initialFormState);
             setErrors({});
         }
     };
 
     const handleClose = () => {
-        setFormData({
-            name: '',
-            age: '',
-            room: '',
-            gender: 'male',
-            medicalHistory: ''
-        });
+        setFormData(initialFormState);
         setErrors({});
         onClose();
     };
@@ -86,22 +119,36 @@ const AddPatientModal = ({ isOpen, onClose, onSubmit }) => {
                 </div>
 
                 <form className="modal-form" onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label htmlFor="patientId" className="form-label">
+                            Patient ID (Auto-generated)
+                        </label>
+                        <input
+                            type="text"
+                            id="patientId"
+                            name="patientId"
+                            className="form-input"
+                            value="Auto-generated on save"
+                            readOnly
+                        />
+                    </div>
+
                     <div className="form-row">
                         <div className="form-group">
-                            <label htmlFor="name" className="form-label">
-                                Patient Name *
+                            <label htmlFor="fullName" className="form-label">
+                                Full Name *
                             </label>
                             <input
                                 type="text"
-                                id="name"
-                                name="name"
-                                className={`form-input ${errors.name ? 'input-error' : ''}`}
-                                placeholder="Enter patient name"
-                                value={formData.name}
+                                id="fullName"
+                                name="fullName"
+                                className={`form-input ${errors.fullName ? 'input-error' : ''}`}
+                                placeholder="Enter full name"
+                                value={formData.fullName}
                                 onChange={handleChange}
                             />
-                            {errors.name && (
-                                <span className="error-text">{errors.name}</span>
+                            {errors.fullName && (
+                                <span className="error-text">{errors.fullName}</span>
                             )}
                         </div>
 
@@ -128,53 +175,167 @@ const AddPatientModal = ({ isOpen, onClose, onSubmit }) => {
 
                     <div className="form-row">
                         <div className="form-group">
-                            <label htmlFor="room" className="form-label">
-                                Room Number *
-                            </label>
-                            <input
-                                type="text"
-                                id="room"
-                                name="room"
-                                className={`form-input ${errors.room ? 'input-error' : ''}`}
-                                placeholder="e.g., 101"
-                                value={formData.room}
-                                onChange={handleChange}
-                            />
-                            {errors.room && (
-                                <span className="error-text">{errors.room}</span>
-                            )}
-                        </div>
-
-                        <div className="form-group">
                             <label htmlFor="gender" className="form-label">
-                                Gender
+                                Gender *
                             </label>
                             <select
                                 id="gender"
                                 name="gender"
-                                className="form-input form-select"
+                                className={`form-input form-select ${errors.gender ? 'input-error' : ''}`}
                                 value={formData.gender}
                                 onChange={handleChange}
                             >
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
+                                <option value="">Select gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
                             </select>
+                            {errors.gender && (
+                                <span className="error-text">{errors.gender}</span>
+                            )}
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="heightCm" className="form-label">
+                                Height (cm)
+                            </label>
+                            <input
+                                type="number"
+                                id="heightCm"
+                                name="heightCm"
+                                className="form-input"
+                                placeholder="e.g., 172"
+                                value={formData.heightCm}
+                                onChange={handleChange}
+                                min="0"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label htmlFor="weightKg" className="form-label">
+                                Weight (kg)
+                            </label>
+                            <input
+                                type="number"
+                                id="weightKg"
+                                name="weightKg"
+                                className="form-input"
+                                placeholder="e.g., 68"
+                                value={formData.weightKg}
+                                onChange={handleChange}
+                                min="0"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="roomNumber" className="form-label">
+                                Room Number *
+                            </label>
+                            <input
+                                type="text"
+                                id="roomNumber"
+                                name="roomNumber"
+                                className={`form-input ${errors.roomNumber ? 'input-error' : ''}`}
+                                placeholder="e.g., 101"
+                                value={formData.roomNumber}
+                                onChange={handleChange}
+                            />
+                            {errors.roomNumber && (
+                                <span className="error-text">{errors.roomNumber}</span>
+                            )}
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="medicalHistory" className="form-label">
-                            Medical History (Optional)
+                        <label className="form-label">
+                            Existing Conditions (Hypertension / Diabetes / Heart issues) *
+                        </label>
+                        <div className="condition-grid">
+                            {EXISTING_CONDITION_OPTIONS.map((condition) => (
+                                <label key={condition} className="condition-option">
+                                    <input
+                                        type="checkbox"
+                                        name="existingConditions"
+                                        value={condition}
+                                        checked={formData.existingConditions.includes(condition)}
+                                        onChange={handleChange}
+                                    />
+                                    <span>{condition}</span>
+                                </label>
+                            ))}
+                        </div>
+                        {errors.existingConditions && (
+                            <span className="error-text">{errors.existingConditions}</span>
+                        )}
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="medications" className="form-label">
+                            Medications (especially BP-related)
                         </label>
                         <textarea
-                            id="medicalHistory"
-                            name="medicalHistory"
+                            id="medications"
+                            name="medications"
                             className="form-input form-textarea"
-                            placeholder="Enter any relevant medical history..."
-                            value={formData.medicalHistory}
+                            placeholder="List current medications"
+                            value={formData.medications}
                             onChange={handleChange}
                             rows="3"
+                        />
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label htmlFor="emergencyContact" className="form-label">
+                                Emergency Contact Number *
+                            </label>
+                            <input
+                                type="text"
+                                id="emergencyContact"
+                                name="emergencyContact"
+                                className={`form-input ${errors.emergencyContact ? 'input-error' : ''}`}
+                                placeholder="e.g., +91 9876543210"
+                                value={formData.emergencyContact}
+                                onChange={handleChange}
+                            />
+                            {errors.emergencyContact && (
+                                <span className="error-text">{errors.emergencyContact}</span>
+                            )}
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="assignedDoctor" className="form-label">
+                                Assigned Doctor *
+                            </label>
+                            <input
+                                type="text"
+                                id="assignedDoctor"
+                                name="assignedDoctor"
+                                className={`form-input ${errors.assignedDoctor ? 'input-error' : ''}`}
+                                placeholder="e.g., Dr. Meera Iyer"
+                                value={formData.assignedDoctor}
+                                onChange={handleChange}
+                            />
+                            {errors.assignedDoctor && (
+                                <span className="error-text">{errors.assignedDoctor}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="assignedNurse" className="form-label">
+                            Assigned Nurse (Room-wise)
+                        </label>
+                        <input
+                            type="text"
+                            id="assignedNurse"
+                            name="assignedNurse"
+                            className="form-input"
+                            placeholder="e.g., Nurse Anjali"
+                            value={formData.assignedNurse}
+                            onChange={handleChange}
                         />
                     </div>
 

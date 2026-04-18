@@ -9,11 +9,24 @@ const generateToken = (id) => {
     });
 };
 
+const ALLOWED_ROLES = new Set(['doctor', 'nurse', 'patient']);
+
+const normalizeRole = (role) => {
+    const normalized = String(role || '').trim().toLowerCase();
+    return ALLOWED_ROLES.has(normalized) ? normalized : null;
+};
+
 exports.registerUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     try {
         const normalizedEmail = String(email || '').trim().toLowerCase();
+        const normalizedRole = normalizeRole(role);
+
+        if (!normalizedRole) {
+            return res.status(400).json({ message: 'Role must be doctor, nurse, or patient' });
+        }
+
         const userExists = store.users.find((user) => user.email === normalizedEmail);
 
         if (userExists) {
@@ -27,7 +40,7 @@ exports.registerUser = async (req, res) => {
             name,
             email: normalizedEmail,
             password: hashedPassword,
-            role: 'patient',
+            role: normalizedRole,
             createdAt: new Date().toISOString(),
         };
 
@@ -38,6 +51,7 @@ exports.registerUser = async (req, res) => {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
                 token: generateToken(user._id),
             });
         } else {
@@ -49,17 +63,23 @@ exports.registerUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     try {
         const normalizedEmail = String(email || '').trim().toLowerCase();
+        const normalizedRole = normalizeRole(role);
         const user = store.users.find((item) => item.email === normalizedEmail);
+
+        if (normalizedRole && user && user.role !== normalizedRole) {
+            return res.status(401).json({ message: `This account is not registered as ${normalizedRole}` });
+        }
 
         if (user && (await bcrypt.compare(String(password || ''), user.password))) {
             res.json({
                 _id: user._id,
                 name: user.name,
                 email: user.email,
+                role: user.role,
                 token: generateToken(user._id),
             });
         } else {
