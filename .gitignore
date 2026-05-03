@@ -1,0 +1,12 @@
+# data & models
+data/
+models/
+*.npz
+*.keras
+*.h5
+*.ckpt
+*.pth
+*.zip
+.DS_Store
+__pycache__/
+.vscode/
